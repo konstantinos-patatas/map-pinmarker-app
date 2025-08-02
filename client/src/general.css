@@ -1,0 +1,49 @@
+/* Custom styles for the map */
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+}
+
+/* Override any conflicting body styles */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Prevent scrollbars */
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+.leaflet-popup-close-button {
+  color: rgba(255, 255, 255, 0.8) !important;      /* brighter red */
+  font-size: 24px !important;     /* bigger */
+  font-weight: bold !important;
+  text-shadow: 0 0 5px black;     /* subtle glow */
+  background: black !important;
+  border-radius: 50% !important;
+  width: 30px !important;
+  height: 30px !important;
+  line-height: 28px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  top: 8px !important;
+  right: 8px !important;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.leaflet-popup-close-button:hover {
+  background-color: #ff1744 !important;
+  color: black !important;
+}
+
+
