@@ -132,7 +132,7 @@ function Home() {
                 open={openError}
                 autoHideDuration={4000}
                 onClose={handleCloseError}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
             >
                 <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%' }}>
                     {errorMessage}

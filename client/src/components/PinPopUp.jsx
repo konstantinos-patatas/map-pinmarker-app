@@ -16,7 +16,7 @@ import {
     Card,
     CardContent,
     Slide,
-    Paper,
+    Paper, Snackbar, Alert,
 } from '@mui/material';
 import {
     Close as CloseIcon,
@@ -49,6 +49,8 @@ export default function PinDrawer({ pin, open, onClose }) {
     const [currentHeight, setCurrentHeight] = useState(120); // Collapsed height
     const drawerRef = useRef(null);
     const [authModalOpen, setAuthModalOpen] = useState(false);
+    const [errorMessage, setErrorMessage] = useState(''); //set error if ocurs
+    const [openError, setOpenError] = useState(false); //open the error alert
 
     const COLLAPSED_HEIGHT = 170;
     const EXPANDED_HEIGHT = window.innerHeight * 0.85;
@@ -56,7 +58,7 @@ export default function PinDrawer({ pin, open, onClose }) {
     const handleFavoriteToggle = async () => {
         if (!currentUser) {
             setAuthModalOpen(true);
-            return; // stop here, wait for login
+            return; // Stop here, wait for login
         }
 
         const favoriteRef = doc(db, `users/${userProfile.uid}/favorites/${pin.id}`);
@@ -73,6 +75,10 @@ export default function PinDrawer({ pin, open, onClose }) {
             setIsFavorite(!isFavorite); // Update local state
         } catch (error) {
             console.error('Error toggling favorite:', error);
+
+            // 🔔 Show error alert in UI
+            setErrorMessage('Something went wrong while updating your favorite. Please try again.');
+            setOpenError(true);
         }
     };
 
@@ -129,10 +135,12 @@ export default function PinDrawer({ pin, open, onClose }) {
             setVerification(type);
         } catch (err) {
             console.error("Verification failed", err);
+            setErrorMessage('Something went wrong while adding your option. Please try again.');
+            setOpenError(true);
         }
     };
 
-
+    const handleCloseError = () => setOpenError(false); //close error alert
 
     // Touch handlers for swipe gesture
     const handleTouchStart = (e) => {
@@ -549,6 +557,17 @@ export default function PinDrawer({ pin, open, onClose }) {
                         Report Issue
                     </Button>
                 </Stack>
+
+                <Snackbar
+                    open={openError}
+                    autoHideDuration={4000}
+                    onClose={handleCloseError}
+                    anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+                >
+                    <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%' }}>
+                        {errorMessage}
+                    </Alert>
+                </Snackbar>
             </Box>
 
             {/*open when someone tries to favorite and they are not authenticated*/}
