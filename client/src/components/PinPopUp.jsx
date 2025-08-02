@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, getDoc,updateDoc,increment } from 'firebase/firestore';
 import {useAuth} from '../context/AuthContext.jsx'
 
 import {
@@ -76,10 +76,63 @@ export default function PinDrawer({ pin, open, onClose }) {
         }
     };
 
+    const handleVerification = async (type) => {
+        if (!currentUser) {
+            setAuthModalOpen(true);
+            return;
+        }
 
-    const handleVerification = (type) => {
-        setVerification(type);
+        const pinRef = doc(db, "pins", pin.id);
+        const voteRef = doc(db, `pins/${pin.id}/votes/${currentUser.uid}`);
+
+        try {
+            const voteSnap = await getDoc(voteRef);
+
+            if (voteSnap.exists()) {
+                const previousVote = voteSnap.data().vote;
+
+                if (previousVote === type) {
+                    // ✅ User clicked the same vote again -> remove it
+                    const updates = {};
+                    if (type === "confirmed") updates.isFreeCount = increment(-1);
+                    if (type === "denied") updates.isNotFreeCount = increment(-1);
+
+                    await updateDoc(pinRef, updates);
+                    await deleteDoc(voteRef);
+
+                    setVerification(null); // Clear UI vote
+                    return;
+                } else {
+                    // ✅ Switching vote (from one type to the other)
+                    const updates = {};
+                    if (previousVote === "confirmed") updates.isFreeCount = increment(-1);
+                    if (previousVote === "denied") updates.isNotFreeCount = increment(-1);
+                    if (type === "confirmed") updates.isFreeCount = (updates.isFreeCount || 0) + increment(1);
+                    if (type === "denied") updates.isNotFreeCount = (updates.isNotFreeCount || 0) + increment(1);
+
+                    await updateDoc(pinRef, updates);
+                    await setDoc(voteRef, { vote: type, votedAt: new Date().toISOString() });
+
+                    setVerification(type);
+                    return;
+                }
+            }
+
+            // ✅ First-time vote
+            const updates = {};
+            if (type === "confirmed") updates.isFreeCount = increment(1);
+            if (type === "denied") updates.isNotFreeCount = increment(1);
+
+            await updateDoc(pinRef, updates);
+            await setDoc(voteRef, { vote: type, votedAt: new Date().toISOString() });
+
+            setVerification(type);
+        } catch (err) {
+            console.error("Verification failed", err);
+        }
     };
+
+
 
     // Touch handlers for swipe gesture
     const handleTouchStart = (e) => {
@@ -130,6 +183,7 @@ export default function PinDrawer({ pin, open, onClose }) {
         }
     };
 
+
     //favorite or not the button on mount
     useEffect(() => {
         const checkFavoriteStatus = async () => {
@@ -142,6 +196,19 @@ export default function PinDrawer({ pin, open, onClose }) {
         };
 
         checkFavoriteStatus();
+    }, [currentUser, pin?.id]);
+
+    //preload vote of the user
+    useEffect(() => {
+        const fetchUserVote = async () => {
+            if (!currentUser || !pin?.id) return;
+            const voteRef = doc(db, `pins/${pin.id}/votes/${currentUser.uid}`);
+            const snap = await getDoc(voteRef);
+            if (snap.exists()) {
+                setVerification(snap.data().vote);
+            }
+        };
+        fetchUserVote();
     }, [currentUser, pin?.id]);
 
 
@@ -194,19 +261,6 @@ export default function PinDrawer({ pin, open, onClose }) {
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
                     Added by {pin.createdBy}
                 </Typography>
-                <Chip
-                    icon={pin.verified ? <VerifiedIcon /> : <PendingActionsIcon />}
-                    label={pin.verified ? 'Verified' : 'Unverified'}
-                    size="small"
-                    color={pin.verified ? 'success' : 'warning'}
-                    variant="outlined"
-                    sx={{
-                        height: 20,
-                        fontSize: '0.7rem',
-                        bgcolor: 'rgba(255,255,255,0.05)',
-                        color: 'white',
-                    }}
-                />
             </Stack>
 
             <Button
@@ -321,21 +375,6 @@ export default function PinDrawer({ pin, open, onClose }) {
                     </CardContent>
                 </Card>
 
-                {/* Status */}
-                <Box sx={{ mb: 2 }}>
-                    <Chip
-                        icon={pin.verified ? <VerifiedIcon /> : <PendingActionsIcon />}
-                        label={pin.verified ? 'Verified' : 'Unverified'}
-                        color={pin.verified ? 'success' : 'warning'}
-                        variant="outlined"
-                        sx={{
-                            bgcolor: 'rgba(255,255,255,0.05)',
-                            color: 'white',
-                            borderColor: pin.verified ? 'success.main' : 'warning.main'
-                        }}
-                    />
-                </Box>
-
                 {/* Note */}
                 {pin.note && (
                     <Card variant="outlined" sx={{ mb: 3, bgcolor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }}>
@@ -360,6 +399,38 @@ export default function PinDrawer({ pin, open, onClose }) {
                         </CardContent>
                     </Card>
                 )}
+
+                {/* Free or not Status */}
+                <Box  sx={{ mb: 2}}>
+                    <Stack direction="row" spacing={1}>
+                        <Chip
+                            icon={<ThumbUpIcon sx={{ color: 'success.main' }} />}
+                            label={`${pin.isFreeCount || 0} said it's free`}
+                            variant="outlined"
+                            sx={{
+                                color: 'white',
+                                borderColor: 'success.main',
+                                backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                                '& .MuiChip-icon': {
+                                    color: 'success.main',
+                                }
+                            }}
+                        />
+                        <Chip
+                            icon={<ThumbDownIcon sx={{ color: 'error.main' }} />}
+                            label={`${pin.isNotFreeCount || 0} said it's not`}
+                            variant="outlined"
+                            sx={{
+                                color: 'white',
+                                borderColor: 'error.main',
+                                backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                                '& .MuiChip-icon': {
+                                    color: 'error.main',
+                                }
+                            }}
+                        />
+                    </Stack>
+                </Box>
 
                 {/* Verification Section */}
                 <Box sx={{ mb: 3 }}>

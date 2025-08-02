@@ -51,7 +51,8 @@ function Home() {
                 note: note || '',
                 streetName: streetName || `Free Parking Spot( ${lat.toFixed(4)}, ${lng.toFixed(4)} )`, // Add street name
                 googleMapsUrl: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`,
-                verified: false
+                isFreeCount: 0,
+                isNotFreeCount: 0,
             };
 
             await addDoc(collection(db, 'pins'), pinData);
