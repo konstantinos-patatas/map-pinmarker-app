@@ -192,6 +192,35 @@ export default function PinPopUp({ pin, open, onClose }) {
         }
     };
 
+    const handleShare = async () => {
+        const url = pin.googleMapsUrl || window.location.href;
+        const title = `Check out this parking spot: ${pin.streetName.displayName}`;
+
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: title,
+                    text: `Here's a parking spot shared via the app.`,
+                    url: url,
+                });
+            } catch (error) {
+                console.error('Error sharing:', error);
+            }
+        } else {
+            // Fallback: copy to clipboard
+            try {
+                await navigator.clipboard.writeText(url);
+                setErrorMessage("Link copied to clipboard!");
+                setOpenError(true);
+            } catch (error) {
+                console.error('Error sharing:', error);
+                setErrorMessage("Failed to copy the link. Try again.");
+                setOpenError(true);
+            }
+        }
+    };
+
+
 
     //favorite or not the button on mount
     useEffect(() => {
@@ -256,7 +285,7 @@ export default function PinPopUp({ pin, open, onClose }) {
             />
 
             <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
-                <Box sx={{ flex: 1, mr: 2 }}>
+                <Box sx={{ flex: 1, mr: 2 }}  onClick={handleExpansionToggle}>
                     <Typography
                         variant="h6"
                         fontWeight={700}
@@ -339,7 +368,7 @@ export default function PinPopUp({ pin, open, onClose }) {
             }}
         >
             {/* Header with drag handle */}
-            <Box sx={{ p: 2, borderBottom: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+            <Box sx={{ p: 2, borderBottom: 1, borderColor: 'rgba(255,255,255,0.1)' }} >
                 {/* Drag handle */}
                 <Box
                     sx={{
@@ -355,7 +384,7 @@ export default function PinPopUp({ pin, open, onClose }) {
                 />
 
                 <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Typography variant="h6" component="h2" fontWeight={600} sx={{ color: 'white' }}>
+                    <Typography variant="h6" component="h2" fontWeight={600} sx={{ color: 'white' }} >
                         {pin.streetName.displayName}
                     </Typography>
                     <Stack direction="row" spacing={1}>
@@ -714,6 +743,7 @@ export default function PinPopUp({ pin, open, onClose }) {
                         </Button>
                         <Tooltip title="Share Location" arrow>
                             <IconButton
+                                onClick={handleShare}
                                 sx={{
                                     border: '2px solid rgba(255,255,255,0.2)',
                                     color: 'rgba(255,255,255,0.8)',
