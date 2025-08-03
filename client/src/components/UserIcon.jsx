@@ -14,6 +14,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
 import Button from "@mui/material/Button";
 import AuthModal from "./AuthModal.jsx";
+import theme from "../theme.js";
 
 
 export default function UserIcon() {
@@ -109,7 +110,7 @@ export default function UserIcon() {
                 }}
                 PaperProps={{
                     sx: {
-                        backgroundColor: 'rgba(13, 27, 42, 0.95)',
+                        backgroundColor: theme.colors.primary,
                         backdropFilter: 'blur(10px)',
                         border: '1px solid rgba(255, 255, 255, 0.1)',
                         borderRadius: '12px',

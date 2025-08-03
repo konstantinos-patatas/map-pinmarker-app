@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { doc, setDoc, deleteDoc, getDoc,updateDoc,increment } from 'firebase/firestore';
-import {useAuth} from '../context/AuthContext.jsx'
+import {useAuth} from '../context/AuthContext.jsx';
 
 import {
     Box,
@@ -16,7 +16,7 @@ import {
     Card,
     CardContent,
     Slide,
-    Paper, Snackbar, Alert,
+    Paper, Snackbar, Alert, Tooltip, Grow, Fade,
 } from '@mui/material';
 import {
     Close as CloseIcon,
@@ -34,11 +34,12 @@ import {
     Share as ShareIcon,
     Flag as FlagIcon,
     ExpandMore as ExpandMoreIcon,
+    Navigation as NavigationIcon,
 } from '@mui/icons-material';
 import {db} from "../services/firebase.js";
 import AuthModal from "./AuthModal.jsx";
 
-export default function PinDrawer({ pin, open, onClose }) {
+export default function PinPopUp({ pin, open, onClose }) {
     const {userProfile,currentUser} = useAuth();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -52,7 +53,7 @@ export default function PinDrawer({ pin, open, onClose }) {
     const [errorMessage, setErrorMessage] = useState(''); //set error if ocurs
     const [openError, setOpenError] = useState(false); //open the error alert
 
-    const COLLAPSED_HEIGHT = 170;
+    const COLLAPSED_HEIGHT = 200;
     const EXPANDED_HEIGHT = window.innerHeight * 0.85;
 
     const handleFavoriteToggle = async () => {
@@ -234,13 +235,19 @@ export default function PinDrawer({ pin, open, onClose }) {
 
     // Collapsed content (peek view)
     const collapsedContent = (
-        <Box sx={{ p: 2, height: COLLAPSED_HEIGHT, display: 'flex', flexDirection: 'column' }}>
-            {/* Drag handle */}
+        <Box sx={{
+            p: 2,
+            height: COLLAPSED_HEIGHT,
+            display: 'flex',
+            flexDirection: 'column',
+            background: 'linear-gradient(135deg, rgba(13, 27, 42, 0.98) 0%, rgba(25, 45, 65, 0.95) 100%)',
+        }}>
+            {/* Modern drag handle */}
             <Box
                 sx={{
-                    width: 40,
+                    width: 50,
                     height: 4,
-                    bgcolor: 'rgba(255,255,255,0.3)',
+                    bgcolor: 'rgba(255,255,255, 0.5)',
                     borderRadius: 2,
                     mx: 'auto',
                     cursor: 'pointer',
@@ -248,44 +255,74 @@ export default function PinDrawer({ pin, open, onClose }) {
                 onClick={handleExpansionToggle}
             />
 
-            <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
-                <Typography variant="subtitle1" fontWeight={600} sx={{ color: 'white', flex: 1 }}>
-                    {pin.streetName.displayName}
-                </Typography>
-                <IconButton
-                    onClick={onClose}
-                    size="small"
-                    sx={{
-                        color: 'white',
-                        border: '1px solid rgba(255,255,255,0.3)',
-                        borderRadius: '50%',
-                    }}
-                >
-                    <CloseIcon fontSize="small" />
-                </IconButton>
-            </Stack>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
+                <Box sx={{ flex: 1, mr: 2 }}>
+                    <Typography
+                        variant="h6"
+                        fontWeight={700}
+                        sx={{
+                            color: 'white',
+                            textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                            mb: 0.5,
+                        }}
+                    >
+                        {pin.streetName.displayName}
+                    </Typography>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                        <Avatar sx={{ width: 20, height: 20, bgcolor: 'rgba(255,255,255,0.2)' }}>
+                            <PersonIcon sx={{ fontSize: 12 }} />
+                        </Avatar>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                            Added by {pin.createdBy}
+                        </Typography>
+                    </Stack>
+                </Box>
 
-            <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                    Added by {pin.createdBy}
-                </Typography>
+                {/*close button*/}
+                <Tooltip title="Close" arrow>
+                    <IconButton
+                        onClick={onClose}
+                        size="large"
+                        sx={{
+                            color: 'white',
+                            bgcolor: 'rgba(255,255,255,0.1)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            borderRadius: '50%',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                                bgcolor: 'rgba(255,255,255,0.2)',
+                                transform: 'scale(1.05)',
+                            }
+                        }}
+                    >
+                        <CloseIcon fontSize="small" />
+                    </IconButton>
+                </Tooltip>
             </Stack>
 
             <Button
                 variant="contained"
                 fullWidth
-                startIcon={<RoomIcon />}
+                startIcon={<NavigationIcon />}
                 onClick={() => window.open(pin.googleMapsUrl, '_blank')}
-                sx={{ mt: 'auto', borderRadius:5}}
+                sx={{
+                    mt: 'auto',
+                    borderRadius: 20,
+                    py: 1.5,
+                    background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                    boxShadow: '0 4px 16px rgba(33, 150, 243, 0.3)',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    fontSize: '1rem',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 6px 20px rgba(33, 150, 243, 0.4)',
+                    }
+                }}
             >
                 Get Directions
             </Button>
-
-            <AuthModal
-                open={authModalOpen}
-                onClose={() => setAuthModalOpen(false)}
-                onAuthSuccess={onAuthSuccess}
-            />
         </Box>
     );
 
@@ -296,9 +333,9 @@ export default function PinDrawer({ pin, open, onClose }) {
                 width: '100%',
                 height: '100%',
                 display: 'flex',
+                overflow:'auto',
                 flexDirection: 'column',
-                bgcolor: 'rgba(13, 27, 42, 0.95)',
-                backdropFilter: 'blur(10px)',
+                background: 'linear-gradient(135deg, rgba(13, 27, 42, 0.98) 0%, rgba(25, 45, 65, 0.95) 100%)'
             }}
         >
             {/* Header with drag handle */}
@@ -344,35 +381,54 @@ export default function PinDrawer({ pin, open, onClose }) {
                 </Stack>
             </Box>
 
-            {/* Scrollable Content */}
-            <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
+            {/*main section below header*/}
+            <Box sx={{ flex: 1, p: 2 }}>
                 {/* Creator Info */}
-                <Card variant="outlined" sx={{ mb: 2, bgcolor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }}>
-                    <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                        <Stack direction="row" alignItems="center" spacing={2} mb={1}>
-                            <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
-                                <PersonIcon fontSize="small" />
+                <Card
+                    variant="outlined"
+                    sx={{
+                        mb: 2,
+                        bgcolor: 'rgba(255,255,255,0.08)',
+                        borderColor: 'rgba(255,255,255,0.15)',
+                        borderRadius: 5,
+                        backdropFilter: 'blur(10px)',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                            bgcolor: 'rgba(255,255,255,0.12)',
+                            transform: 'translateY(-1px)',
+                        }
+                    }}
+                >
+                    <CardContent sx={{ p: 2, '&:last-child': { pb: 1} }}>
+                        <Stack direction="row" alignItems="center" spacing={2} mb={2}>
+                            <Avatar sx={{
+                                width: 48,
+                                height: 48,
+                                bgcolor: 'rgba(33, 150, 243, 0.2)',
+                                border: '2px solid rgba(33, 150, 243, 0.3)',
+                            }}>
+                                <PersonIcon />
                             </Avatar>
                             <Box>
-                                <Typography variant="subtitle2" fontWeight={600} sx={{ color: 'white' }}>
+                                <Typography variant="h6" fontWeight={600} sx={{ color: 'white' }}>
                                     {pin.createdBy}
                                 </Typography>
-                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                                    Creator
+                                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                                    Parking spot creator
                                 </Typography>
                             </Box>
                         </Stack>
 
-                        <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
-                            <Stack direction="row" alignItems="center" spacing={0.5}>
-                                <CalendarTodayIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.5)' }} />
-                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                        <Stack direction="row" spacing={3}>
+                            <Stack direction="row" alignItems="center" spacing={1}>
+                                <CalendarTodayIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.6)' }} />
+                                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
                                     {new Date(pin.createdAt).toLocaleDateString()}
                                 </Typography>
                             </Stack>
-                            <Stack direction="row" alignItems="center" spacing={0.5}>
-                                <AccessTimeIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.5)' }} />
-                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                            <Stack direction="row" alignItems="center" spacing={1}>
+                                <AccessTimeIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.6)' }} />
+                                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
                                     {new Date(pin.createdAt).toLocaleTimeString([], {
                                         hour: '2-digit',
                                         minute: '2-digit'
@@ -385,124 +441,252 @@ export default function PinDrawer({ pin, open, onClose }) {
 
                 {/* Note */}
                 {pin.note && (
-                    <Card variant="outlined" sx={{ mb: 3, bgcolor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }}>
-                        <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                            <Stack direction="row" alignItems="flex-start" spacing={1} mb={1}>
-                                <NoteIcon fontSize="small" sx={{ color: 'rgba(255,255,255,0.5)' }} />
-                                <Typography variant="subtitle2" fontWeight={600} sx={{ color: 'white' }}>
-                                    Notes
-                                </Typography>
-                            </Stack>
-                            <Typography
-                                variant="body2"
-                                sx={{
-                                    color: 'rgba(255,255,255,0.8)',
-                                    whiteSpace: 'pre-wrap',
-                                    wordBreak: 'break-word',
-                                    lineHeight: 1.5,
-                                }}
-                            >
-                                {pin.note}
-                            </Typography>
-                        </CardContent>
-                    </Card>
+                    <Grow in={true} timeout={800}>
+                        <Card
+                            variant="outlined"
+                            sx={{
+                                mb: 2,
+                                bgcolor: 'rgba(255,255,255,0.08)',
+                                borderColor: 'rgba(255,255,255,0.15)',
+                                borderRadius: 5,
+                                backdropFilter: 'blur(10px)',
+                            }}
+                        >
+                            <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
+                                <Stack direction="row" alignItems="flex-start" spacing={2} mb={2}>
+                                    <Box sx={{
+                                        p:0.7,
+                                        bgcolor: 'rgba(255, 193, 7, 0.2)',
+                                        borderRadius: '50%',
+                                        border: '1px solid rgba(255, 193, 7, 0.3)',
+                                    }}>
+                                        <NoteIcon sx={{ color: '#FFC107', fontSize: 20 }} />
+                                    </Box>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Typography variant="h6" fontWeight={600} sx={{ color: 'white', mb: 1 }}>
+                                            Additional Notes
+                                        </Typography>
+                                        <Typography
+                                            variant="body1"
+                                            sx={{
+                                                color: 'rgba(255,255,255,0.9)',
+                                                whiteSpace: 'pre-wrap',
+                                                wordBreak: 'break-word',
+                                                lineHeight: 1.6,
+                                            }}
+                                        >
+                                            {pin.note}
+                                        </Typography>
+                                    </Box>
+                                </Stack>
+                            </CardContent>
+                        </Card>
+                    </Grow>
                 )}
 
-                {/* Free or not Status */}
-                <Box  sx={{ mb: 2}}>
-                    <Stack direction="row" spacing={1}>
-                        <Chip
-                            icon={<ThumbUpIcon sx={{ color: 'success.main' }} />}
-                            label={`${pin.isFreeCount || 0} said it's free`}
-                            variant="outlined"
-                            sx={{
-                                color: 'white',
-                                borderColor: 'success.main',
-                                backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                                '& .MuiChip-icon': {
-                                    color: 'success.main',
-                                }
-                            }}
-                        />
-                        <Chip
-                            icon={<ThumbDownIcon sx={{ color: 'error.main' }} />}
-                            label={`${pin.isNotFreeCount || 0} said it's not`}
-                            variant="outlined"
-                            sx={{
-                                color: 'white',
-                                borderColor: 'error.main',
-                                backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                                '& .MuiChip-icon': {
-                                    color: 'error.main',
-                                }
-                            }}
-                        />
-                    </Stack>
+                {/* Simple Bar Chart Feedback showing how likely is actually free or not */}
+                <Box >
+                    {(() => {
+                        const totalVotes = (pin.isFreeCount || 0) + (pin.isNotFreeCount || 0);
+                        const freeVotes = pin.isFreeCount || 0;
+                        const paidVotes = pin.isNotFreeCount || 0;
+                        const freePercentage = totalVotes > 0 ? (freeVotes / totalVotes) * 100 : 0;
+
+                        // Determine trust level and message
+                        const getTrustLevel = () => {
+                            if (totalVotes === 0) {
+                                return {
+                                    icon: '❓',
+                                    title: "No one reported whether it is free parking",
+                                    subtitle: 'Check current conditions and add feedback 🙏',
+                                    color: '#9E9E9E',
+                                    bgColor: 'rgba(158, 158, 158, 0.1)',
+                                    borderColor: 'rgba(158, 158, 158, 0.2)'
+                                };
+                            }
+
+                            if (freePercentage >= 75) {
+                                return {
+                                    icon: '✅',
+                                    title: 'Likely Free',
+                                    subtitle: `${freeVotes} of ${totalVotes} people say it's free`,
+                                    color: '#4CAF50',
+                                    bgColor: 'rgba(76, 175, 80, 0.15)',
+                                    borderColor: 'rgba(76, 175, 80, 0.3)'
+                                };
+                            } else if (freePercentage >= 25) {
+                                return {
+                                    icon: '⚠️',
+                                    title: 'Might be free parking',
+                                    subtitle: `${freeVotes} people said is free, ${paidVotes} people said is paid - check current conditions`,
+                                    color: '#FF9800',
+                                    bgColor: 'rgba(255, 152, 0, 0.1)',
+                                    borderColor: 'rgba(255, 152, 0, 0.3)'
+                                };
+                            } else {
+                                return {
+                                    icon: '❌',
+                                    title: 'Likely Paid',
+                                    subtitle: `${paidVotes} of ${totalVotes} people say it's not free`,
+                                    color: '#F44336',
+                                    bgColor: 'rgba(244, 67, 54, 0.15)',
+                                    borderColor: 'rgba(244, 67, 54, 0.3)'
+                                };
+                            }
+                        };
+
+                        const trustInfo = getTrustLevel();
+
+                        return (
+                            <Box sx={{
+                                p: 2.5,
+                                bgcolor: trustInfo.bgColor,
+                                border: `2px solid ${trustInfo.borderColor}`,
+                                borderRadius: 5,
+                                backdropFilter: 'blur(10px)',
+                            }}>
+                                {/* Icon + Title Row */}
+                                <Stack direction="row" alignItems="center" spacing={1.5} mb={1}>
+                                    <Typography
+                                        sx={{
+                                            fontSize: '1.8rem',
+                                            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))'
+                                        }}
+                                    >
+                                        {trustInfo.icon}
+                                    </Typography>
+
+                                    <Typography
+                                        variant="h6"
+                                        fontWeight={700}
+                                        sx={{
+                                            color: trustInfo.color,
+                                            textShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                                        }}
+                                    >
+                                        {trustInfo.title}
+                                    </Typography>
+                                </Stack>
+
+                                <Typography
+                                    variant="body2"
+                                    sx={{
+                                        color: 'rgba(255,255,255,0.9)',
+                                        fontWeight: 500,
+                                        lineHeight: 1.4
+                                    }}
+                                >
+                                    {trustInfo.subtitle}
+                                </Typography>
+                            </Box>
+                        );
+                    })()}
                 </Box>
 
                 {/* Verification Section */}
-                <Box sx={{ mb: 3 }}>
-                    <Typography variant="subtitle2" fontWeight={600} mb={2} sx={{ color: 'white' }}>
-                        Is this spot actually free parking?
+                <Box sx={{ my: 3 }}>
+                    <Typography variant="h6" fontWeight={600} mb={1} sx={{ color: 'white' }}>
+                        Share Your Experience
                     </Typography>
-                    <Stack direction="row" spacing={1}>
+                    <Stack direction="row" spacing={2}>
                         <Button
                             variant={verification === 'confirmed' ? 'contained' : 'outlined'}
                             color="success"
                             startIcon={<ThumbUpIcon />}
                             onClick={() => handleVerification('confirmed')}
-                            size="small"
                             sx={{
+                                flex: 1,
+                                borderRadius: 20,
+                                fontWeight: 600,
+                                textTransform: 'none',
+                                transition: 'all 0.2s ease',
                                 ...(verification !== 'confirmed' && {
-                                    borderColor: 'rgba(76, 175, 80, 0.5)',
-                                    color: 'rgba(76, 175, 80, 0.8)',
+                                    borderColor: 'rgba(76, 175, 80, 0.4)',
+                                    color: '#4CAF50',
+                                    bgcolor: 'rgba(76, 175, 80, 0.1)',
                                     '&:hover': {
-                                        borderColor: 'success.main',
-                                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                                        borderColor: '#4CAF50',
+                                        bgcolor: 'rgba(76, 175, 80, 0.2)',
+                                        transform: 'translateY(-1px)',
                                     }
+                                }),
+                                ...(verification === 'confirmed' && {
+                                    boxShadow: '0 4px 16px rgba(76, 175, 80, 0.2)',
                                 })
                             }}
                         >
-                            Yes, Free
+                            Yes, It's Free
                         </Button>
                         <Button
                             variant={verification === 'denied' ? 'contained' : 'outlined'}
                             color="error"
                             startIcon={<ThumbDownIcon />}
                             onClick={() => handleVerification('denied')}
-                            size="small"
                             sx={{
+                                flex: 1,
+                                borderRadius: 20,
+                                fontWeight: 600,
+                                textTransform: 'none',
+                                transition: 'all 0.2s ease',
                                 ...(verification !== 'denied' && {
-                                    borderColor: 'rgba(244, 67, 54, 0.5)',
-                                    color: 'rgba(244, 67, 54, 0.8)',
+                                    borderColor: 'rgba(244, 67, 54, 0.4)',
+                                    color: '#F44336',
+                                    bgcolor: 'rgba(244, 67, 54, 0.1)',
                                     '&:hover': {
-                                        borderColor: 'error.main',
-                                        backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                                        borderColor: '#F44336',
+                                        bgcolor: 'rgba(244, 67, 54, 0.2)',
+                                        transform: 'translateY(-1px)',
                                     }
+                                }),
+                                ...(verification === 'denied' && {
+                                    boxShadow: '0 4px 16px rgba(244, 67, 54, 0.3)',
                                 })
                             }}
                         >
                             Not Free
                         </Button>
                     </Stack>
-                    {/*if press one of the options thank user with typography*/}
-                    {verification && (
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', mt: 1, display: 'block' }}>
-                            Thank you for your feedback {'\u2764'}
+
+                    {/* Success message */}
+                    <Fade in={verification !== null}>
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                color: 'rgba(255,255,255,0.8)',
+                                mt: 2,
+                                textAlign: 'center',
+                                fontStyle: 'italic',
+                            }}
+                        >
+                            {verification && `Thank you for your feedback! 🙏`}
                         </Typography>
-                    )}
+                    </Fade>
+
                 </Box>
 
                 <Divider sx={{ my: 2, borderColor: 'rgba(255,255,255,0.1)' }} />
-
                 {/* Action Buttons */}
                 <Stack spacing={2}>
                     <Button
                         variant="contained"
                         fullWidth
-                        startIcon={<RoomIcon />}
+                        startIcon={<NavigationIcon />}
                         onClick={() => window.open(pin.googleMapsUrl, '_blank')}
-                        sx={{ py: 1.5, borderRadius: 5 }}
+                        sx={{
+                            mt: 'auto',
+                            borderRadius: 20,
+                            py: 1.5,
+                            background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                            boxShadow: '0 4px 16px rgba(33, 150, 243, 0.3)',
+                            fontWeight: 600,
+                            textTransform: 'none',
+                            fontSize: '1rem',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                                transform: 'translateY(-2px)',
+                                boxShadow: '0 6px 20px rgba(33, 150, 243, 0.4)',
+                            }
+                        }}
                     >
                         Get Directions
                     </Button>
@@ -515,7 +699,7 @@ export default function PinDrawer({ pin, open, onClose }) {
                             onClick={handleFavoriteToggle}
                             color={isFavorite ? 'error' : 'primary'}
                             sx={{
-                                borderRadius: 5,
+                                borderRadius: 20,
                                 ...(!isFavorite && {
                                     borderColor: 'rgba(25, 118, 210, 0.5)',
                                     color: 'rgba(25, 118, 210, 0.8)',
@@ -528,18 +712,27 @@ export default function PinDrawer({ pin, open, onClose }) {
                         >
                             {isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}
                         </Button>
-                        <IconButton
-                            sx={{
-                                border: '1px solid rgba(255,255,255,0.2)',
-                                color: 'rgba(255,255,255,0.7)',
-                                '&:hover': {
-                                    backgroundColor: 'rgba(255,255,255,0.1)',
-                                    borderColor: 'rgba(255,255,255,0.4)',
-                                }
-                            }}
-                        >
-                            <ShareIcon />
-                        </IconButton>
+                        <Tooltip title="Share Location" arrow>
+                            <IconButton
+                                sx={{
+                                    border: '2px solid rgba(255,255,255,0.2)',
+                                    color: 'rgba(255,255,255,0.8)',
+                                    bgcolor: 'rgba(255,255,255,0.03)',
+                                    borderRadius: 20,
+                                    width: 56,
+                                    height: 56,
+                                    transition: 'all 0.2s ease',
+                                    '&:hover': {
+                                        bgcolor: 'rgba(255,255,255,0.15)',
+                                        borderColor: 'rgba(255,255,255,0.4)',
+                                        color: 'white',
+                                        transform: 'translateY(-1px)',
+                                    }
+                                }}
+                            >
+                                <ShareIcon />
+                            </IconButton>
+                        </Tooltip>
                     </Stack>
 
                     <Button
