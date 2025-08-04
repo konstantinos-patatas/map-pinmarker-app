@@ -54,9 +54,10 @@ export default function LayersControl({
             {/* Layers Toggle Button */}
             <Tooltip title="Map Layers" placement="right">
                 <Fab
-                    size="large"
                     onClick={toggleLayersPanel}
                     sx={{
+                        width: 56,
+                        height: 56,
                         background: 'linear-gradient(135deg, rgba(13, 27, 42, 0.98) 0%, rgba(25, 45, 65, 0.95) 100%)',
                         color: 'white',
                         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',

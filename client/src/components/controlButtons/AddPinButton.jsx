@@ -193,7 +193,7 @@ const AddPinButton = React.forwardRef(({
                 <Box
                     sx={{
                         position: 'absolute',
-                        bottom: 140,
+                        bottom: 30,
                         left: '50%',
                         transform: 'translateX(-50%)',
                         zIndex: 2000,

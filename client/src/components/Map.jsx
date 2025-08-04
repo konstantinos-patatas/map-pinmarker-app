@@ -515,7 +515,7 @@ export default function Map({ onMapClick, currentUser }) {
             <LayersControl 
                 currentLayer={currentLayer}
                 onLayerChange={handleLayerChange}
-                position={{ left: 10, bottom: 15 }}
+                position={{ left: 10, bottom: 10 }}
             />
 
             <Box
