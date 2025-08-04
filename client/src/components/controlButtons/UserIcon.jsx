@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 import {
     Avatar,
     Box,
@@ -13,8 +13,8 @@ import {
 import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
 import Button from "@mui/material/Button";
-import AuthModal from "./AuthModal.jsx";
-import theme from "../theme.js";
+import AuthModal from "../AuthModal.jsx";
+import theme from "../../theme.js";
 
 
 export default function UserIcon() {
@@ -75,8 +75,8 @@ export default function UserIcon() {
                 >
                     <Avatar
                         sx={{
-                            width: 45,
-                            height: 45,
+                            width: 50,
+                            height: 50,
                             backgroundColor: 'black',
                             color: 'white',
                             fontSize: '20px',
