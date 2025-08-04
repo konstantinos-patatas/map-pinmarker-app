@@ -220,8 +220,6 @@ export default function PinPopUp({ pin, open, onClose }) {
         }
     };
 
-
-
     //favorite or not the button on mount
     useEffect(() => {
         const checkFavoriteStatus = async () => {

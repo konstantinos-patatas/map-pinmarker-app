@@ -3,10 +3,25 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Modal from '@mui/material/Modal';
-import Divider from '@mui/material/Divider';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import TextField from '@mui/material/TextField';
+import IconButton from '@mui/material/IconButton';
+import InputAdornment from '@mui/material/InputAdornment';
+import Fade from '@mui/material/Fade';
+import Slide from '@mui/material/Slide';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
+import {
+    Close as CloseIcon,
+    Visibility as VisibilityIcon,
+    VisibilityOff as VisibilityOffIcon,
+    Person as PersonIcon,
+    Email as EmailIcon,
+    Lock as LockIcon,
+    Login as LoginIcon,
+    PersonAdd as PersonAddIcon
+} from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext.jsx';
 
 const modalStyle = {
@@ -14,13 +29,16 @@ const modalStyle = {
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    bgcolor: '#0d1b2a',
-    borderRadius: 2,
-    boxShadow: 24,
-    p: 4,
-    minWidth: { xs: 300, md: 400 },
+    bgcolor: 'rgba(13, 27, 42, 0.98)',
+    borderRadius: 4,
+    boxShadow: '0 24px 48px rgba(0,0,0,0.4), 0 0 0 1px rgba(179, 234, 255, 0.1)',
+    backdropFilter: 'blur(20px)',
+    p: 0,
+    minWidth: { xs: 340, md: 420 },
+    maxWidth: { xs: '90vw', md: '420px' },
     color: '#e0e1dd',
-    textAlign: 'center',
+    overflow: 'hidden',
+    border: '1px solid rgba(179, 234, 255, 0.2)',
 };
 
 const a11yProps = index => ({
@@ -32,6 +50,8 @@ export default function AuthModal({ open, onClose, onAuthSuccess }) {
     const { login, signup } = useAuth();
     const [tab, setTab] = useState(0);
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     // Login state
     const [loginEmail, setLoginEmail] = useState('');
@@ -60,6 +80,8 @@ export default function AuthModal({ open, onClose, onAuthSuccess }) {
         setSignupConfirm('');
         setLoginError('');
         setSignupError('');
+        setShowPassword(false);
+        setShowConfirmPassword(false);
     };
 
     const handleLogin = async e => {
@@ -76,7 +98,6 @@ export default function AuthModal({ open, onClose, onAuthSuccess }) {
             await login(loginEmail, loginPassword);
             clearForm();
             onClose();
-            // Call success callback if provided
             if (onAuthSuccess) {
                 onAuthSuccess();
             }
@@ -108,11 +129,9 @@ export default function AuthModal({ open, onClose, onAuthSuccess }) {
 
         try {
             setLoading(true);
-            // Pass the fullName parameter to signup
             await signup(signupEmail, signupPassword, signupFullName);
             clearForm();
             onClose();
-            // Call success callback if provided
             if (onAuthSuccess) {
                 onAuthSuccess();
             }
@@ -129,188 +148,549 @@ export default function AuthModal({ open, onClose, onAuthSuccess }) {
     };
 
     return (
-        <Modal open={open} onClose={handleClose} aria-labelledby="firebase-auth-modal">
-            <Box sx={modalStyle}>
-                <Typography id="firebase-auth-modal" variant="h5" sx={{ mb: 2 }}>
-                    {tab === 0 ? 'Log In to Your Account' : 'Create an Account'}
-                </Typography>
-                <Divider sx={{ mb: 2, bgcolor: '#b3eaff' }} />
-
-                <Tabs
-                    value={tab}
-                    onChange={handleTabChange}
-                    centered
-                    textColor="inherit"
-                    TabIndicatorProps={{ style: { display: 'none' } }}
-                    sx={{
-                        mb: 4,
-                        borderRadius: 3,
-                        border: "1.5px solid #00bfff",
-                        width: "fit-content",
-                        mx: "auto",
-                        background: "rgba(0,191,255,0.02)",
-                    }}
-                >
-                    <Tab label="Login" {...a11yProps(0)} sx={{
-                        color: tab === 0 ? '#0d1b2a' : '#00bfff',
-                        fontWeight: 'bold',
-                        background: tab === 0 ? '#00bfff' : 'transparent',
-                        borderRadius: 3,
-                        minWidth: 100,
-                    }} />
-                    <Tab label="Sign Up" {...a11yProps(1)} sx={{
-                        color: tab === 1 ? '#0d1b2a' : '#00bfff',
-                        fontWeight: 'bold',
-                        background: tab === 1 ? '#00bfff' : 'transparent',
-                        borderRadius: 3,
-                        minWidth: 100,
-                    }} />
-                </Tabs>
-
-                {/* Login Form */}
-                {tab === 0 && (
-                    <Box component="form" onSubmit={handleLogin} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <TextField
-                            label="Email"
-                            type="email"
-                            variant="outlined"
-                            value={loginEmail}
-                            onChange={e => setLoginEmail(e.target.value)}
-                            fullWidth
-                            required
+        <Modal
+            open={open}
+            onClose={handleClose}
+            aria-labelledby="auth-modal"
+            closeAfterTransition
+            sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+            }}
+        >
+            <Fade in={open} timeout={300}>
+                <Box sx={modalStyle}>
+                    {/* Header */}
+                    <Box sx={{
+                        position: 'relative',
+                        background: 'linear-gradient(135deg, rgba(0, 191, 255, 0.1) 0%, rgba(179, 234, 255, 0.05) 100%)',
+                        p: 3,
+                        borderBottom: '1px solid rgba(179, 234, 255, 0.15)',
+                    }}>
+                        <IconButton
+                            onClick={handleClose}
                             disabled={loading}
                             sx={{
-                                input: { color: '#e0e1dd' },
-                                label: { color: '#b3eaff' },
-                                '& fieldset': { borderColor: '#b3eaff', borderRadius: 3 }
-                            }}
-                        />
-                        <TextField
-                            label="Password"
-                            type="password"
-                            variant="outlined"
-                            value={loginPassword}
-                            onChange={e => setLoginPassword(e.target.value)}
-                            fullWidth
-                            required
-                            disabled={loading}
-                            sx={{
-                                input: { color: '#e0e1dd' },
-                                label: { color: '#b3eaff' },
-                                '& fieldset': { borderColor: '#b3eaff', borderRadius: 3 }
-                            }}
-                        />
-                        {loginError && <Typography color="error" sx={{ fontSize: '0.95rem' }}>{loginError}</Typography>}
-                        <Button
-                            type="submit"
-                            variant="contained"
-                            disabled={loading}
-                            sx={{
-                                background: '#00bfff',
-                                color: '#0d1b2a',
-                                borderRadius: 3,
-                                mt: 2,
-                                '&:disabled': { background: '#666', color: '#ccc' }
+                                position: 'absolute',
+                                right: 12,
+                                top: 12,
+                                color: '#b3eaff',
+                                bgcolor: 'rgba(179, 234, 255, 0.1)',
+                                backdropFilter: 'blur(10px)',
+                                transition: 'all 0.2s ease',
+                                '&:hover': {
+                                    bgcolor: 'rgba(179, 234, 255, 0.2)',
+                                    transform: 'scale(1.05)',
+                                },
+                                '&:disabled': {
+                                    color: '#666',
+                                    bgcolor: 'rgba(102, 102, 102, 0.1)',
+                                }
                             }}
                         >
-                            {loading ? 'Logging in...' : 'Login'}
-                        </Button>
-                    </Box>
-                )}
+                            <CloseIcon fontSize="small" />
+                        </IconButton>
 
-                {/* Signup Form */}
-                {tab === 1 && (
-                    <Box component="form" onSubmit={handleSignup} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <TextField
-                            label="Full Name"
-                            variant="outlined"
-                            value={signupFullName}
-                            onChange={e => setSignupFullName(e.target.value)}
-                            fullWidth
-                            required
-                            disabled={loading}
+                        <Box sx={{ textAlign: 'center', pr: 4 }}>
+                            <Typography
+                                variant="h4"
+                                sx={{
+                                    mb: 1,
+                                    fontWeight: 700,
+                                    background: 'linear-gradient(45deg, #00bfff, #b3eaff)',
+                                    backgroundClip: 'text',
+                                    WebkitBackgroundClip: 'text',
+                                    WebkitTextFillColor: 'transparent',
+                                    textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                                }}
+                            >
+                                {tab === 0 ? 'Welcome Back' : 'Join Us'}
+                            </Typography>
+                            <Typography
+                                variant="body1"
+                                sx={{
+                                    color: 'rgba(224, 225, 221, 0.8)',
+                                    fontWeight: 400,
+                                }}
+                            >
+                                {tab === 0 ? 'Sign in to your account' : 'Create your account'}
+                            </Typography>
+                        </Box>
+                    </Box>
+
+                    {/* Tab Navigation */}
+                    <Box sx={{ p: 3, pb: 0 }}>
+                        <Tabs
+                            value={tab}
+                            onChange={handleTabChange}
+                            centered
+                            variant="fullWidth"
                             sx={{
-                                input: { color: '#e0e1dd' },
-                                label: { color: '#b3eaff' },
-                                '& fieldset': { borderColor: '#b3eaff', borderRadius: 3 }
-                            }}
-                        />
-                        <TextField
-                            label="Email"
-                            type="email"
-                            variant="outlined"
-                            value={signupEmail}
-                            onChange={e => setSignupEmail(e.target.value)}
-                            fullWidth
-                            required
-                            disabled={loading}
-                            sx={{
-                                input: { color: '#e0e1dd' },
-                                label: { color: '#b3eaff' },
-                                '& fieldset': { borderColor: '#b3eaff', borderRadius: 3 }
-                            }}
-                        />
-                        <TextField
-                            label="Password"
-                            type="password"
-                            variant="outlined"
-                            value={signupPassword}
-                            onChange={e => setSignupPassword(e.target.value)}
-                            fullWidth
-                            required
-                            disabled={loading}
-                            sx={{
-                                input: { color: '#e0e1dd' },
-                                label: { color: '#b3eaff' },
-                                '& fieldset': { borderColor: '#b3eaff', borderRadius: 3 }
-                            }}
-                        />
-                        <TextField
-                            label="Confirm Password"
-                            type="password"
-                            variant="outlined"
-                            value={signupConfirm}
-                            onChange={e => setSignupConfirm(e.target.value)}
-                            fullWidth
-                            required
-                            disabled={loading}
-                            sx={{
-                                input: { color: '#e0e1dd' },
-                                label: { color: '#b3eaff' },
-                                '& fieldset': { borderColor: '#b3eaff', borderRadius: 3 }
-                            }}
-                        />
-                        {signupError && <Typography color="error" sx={{ fontSize: '0.95rem' }}>{signupError}</Typography>}
-                        <Button
-                            type="submit"
-                            variant="contained"
-                            disabled={loading}
-                            sx={{
-                                background: '#00bfff',
-                                color: '#0d1b2a',
-                                borderRadius: 3,
-                                mt: 2,
-                                '&:disabled': { background: '#666', color: '#ccc' }
+                                mb: 3,
+                                borderRadius: 2,
+                                bgcolor: 'rgba(179, 234, 255, 0.05)',
+                                border: '1px solid rgba(179, 234, 255, 0.2)',
+                                backdropFilter: 'blur(10px)',
+                                '& .MuiTabs-indicator': {
+                                    display: 'none',
+                                },
+                                '& .MuiTab-root': {
+                                    borderRadius: 2,
+                                    margin: '4px',
+                                    minHeight: 48,
+                                    fontWeight: 600,
+                                    textTransform: 'none',
+                                    fontSize: '1rem',
+                                    transition: 'all 0.2s ease',
+                                }
                             }}
                         >
-                            {loading ? 'Signing up...' : 'Sign Up'}
-                        </Button>
+                            <Tab
+                                icon={<LoginIcon sx={{ fontSize: 18 }} />}
+                                iconPosition="start"
+                                label="Sign In"
+                                {...a11yProps(0)}
+                                sx={{
+                                    color: tab === 0 ? '#0d1b2a' : '#b3eaff',
+                                    bgcolor: tab === 0 ? '#00bfff' : 'transparent',
+                                    boxShadow: tab === 0 ? '0 4px 12px rgba(0, 191, 255, 0.3)' : 'none',
+                                    '&:hover': {
+                                        bgcolor: tab === 0 ? '#00bfff' : 'rgba(179, 234, 255, 0.1)',
+                                    }
+                                }}
+                            />
+                            <Tab
+                                icon={<PersonAddIcon sx={{ fontSize: 18 }} />}
+                                iconPosition="start"
+                                label="Sign Up"
+                                {...a11yProps(1)}
+                                sx={{
+                                    color: tab === 1 ? '#0d1b2a' : '#b3eaff',
+                                    bgcolor: tab === 1 ? '#00bfff' : 'transparent',
+                                    boxShadow: tab === 1 ? '0 4px 12px rgba(0, 191, 255, 0.3)' : 'none',
+                                    '&:hover': {
+                                        bgcolor: tab === 1 ? '#00bfff' : 'rgba(179, 234, 255, 0.1)',
+                                    }
+                                }}
+                            />
+                        </Tabs>
                     </Box>
-                )}
 
-                <Button
-                    onClick={handleClose}
-                    disabled={loading}
-                    sx={{
-                        color: '#b3eaff',
-                        mt: 3,
-                        textTransform: 'none',
-                        '&:disabled': { color: '#666' }
-                    }}
-                >
-                    Close
-                </Button>
-            </Box>
+                    {/* Form Content */}
+                    <Box sx={{ p: 3, pt: 0 }}>
+                        {/* Login Form */}
+                        {tab === 0 && (
+                            <Slide direction="right" in={tab === 0} mountOnEnter unmountOnExit timeout={300}>
+                                <Box component="form" onSubmit={handleLogin} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                    {loginError && (
+                                        <Alert
+                                            severity="error"
+                                            sx={{
+                                                bgcolor: 'rgba(244, 67, 54, 0.1)',
+                                                color: '#ff5252',
+                                                border: '1px solid rgba(244, 67, 54, 0.3)',
+                                                borderRadius: 2,
+                                                '& .MuiAlert-icon': { color: '#ff5252' }
+                                            }}
+                                        >
+                                            {loginError}
+                                        </Alert>
+                                    )}
+
+                                    <TextField
+                                        label="Email Address"
+                                        type="email"
+                                        variant="outlined"
+                                        value={loginEmail}
+                                        onChange={e => setLoginEmail(e.target.value)}
+                                        fullWidth
+                                        required
+                                        disabled={loading}
+                                        InputProps={{
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <EmailIcon sx={{ color: '#b3eaff', fontSize: 20 }} />
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: 2,
+                                                bgcolor: 'rgba(179, 234, 255, 0.03)',
+                                                backdropFilter: 'blur(10px)',
+                                                transition: 'all 0.2s ease',
+                                                '& fieldset': {
+                                                    borderColor: 'rgba(179, 234, 255, 0.3)',
+                                                    borderWidth: 1.5,
+                                                },
+                                                '&:hover fieldset': {
+                                                    borderColor: 'rgba(179, 234, 255, 0.5)',
+                                                },
+                                                '&.Mui-focused fieldset': {
+                                                    borderColor: '#00bfff',
+                                                    boxShadow: '0 0 0 3px rgba(0, 191, 255, 0.1)',
+                                                },
+                                            },
+                                            '& .MuiInputBase-input': {
+                                                color: '#e0e1dd',
+                                                fontSize: '1rem',
+                                            },
+                                            '& .MuiInputLabel-root': {
+                                                color: '#b3eaff',
+                                                fontWeight: 500,
+                                            },
+                                        }}
+                                    />
+
+                                    <TextField
+                                        label="Password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        variant="outlined"
+                                        value={loginPassword}
+                                        onChange={e => setLoginPassword(e.target.value)}
+                                        fullWidth
+                                        required
+                                        disabled={loading}
+                                        InputProps={{
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <LockIcon sx={{ color: '#b3eaff', fontSize: 20 }} />
+                                                </InputAdornment>
+                                            ),
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <IconButton
+                                                        onClick={() => setShowPassword(!showPassword)}
+                                                        edge="end"
+                                                        sx={{ color: '#b3eaff' }}
+                                                    >
+                                                        {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: 2,
+                                                bgcolor: 'rgba(179, 234, 255, 0.03)',
+                                                backdropFilter: 'blur(10px)',
+                                                transition: 'all 0.2s ease',
+                                                '& fieldset': {
+                                                    borderColor: 'rgba(179, 234, 255, 0.3)',
+                                                    borderWidth: 1.5,
+                                                },
+                                                '&:hover fieldset': {
+                                                    borderColor: 'rgba(179, 234, 255, 0.5)',
+                                                },
+                                                '&.Mui-focused fieldset': {
+                                                    borderColor: '#00bfff',
+                                                    boxShadow: '0 0 0 3px rgba(0, 191, 255, 0.1)',
+                                                },
+                                            },
+                                            '& .MuiInputBase-input': {
+                                                color: '#e0e1dd',
+                                                fontSize: '1rem',
+                                            },
+                                            '& .MuiInputLabel-root': {
+                                                color: '#b3eaff',
+                                                fontWeight: 500,
+                                            },
+                                        }}
+                                    />
+
+                                    <Button
+                                        type="submit"
+                                        variant="contained"
+                                        disabled={loading}
+                                        size="large"
+                                        startIcon={loading ? <CircularProgress size={20} sx={{ color: '#0d1b2a' }} /> : <LoginIcon />}
+                                        sx={{
+                                            background: 'linear-gradient(45deg, #00bfff 30%, #40c4ff 90%)',
+                                            color: '#0d1b2a',
+                                            borderRadius: 2,
+                                            py: 1.5,
+                                            fontWeight: 600,
+                                            fontSize: '1rem',
+                                            textTransform: 'none',
+                                            boxShadow: '0 6px 20px rgba(0, 191, 255, 0.3)',
+                                            transition: 'all 0.2s ease',
+                                            '&:hover': {
+                                                background: 'linear-gradient(45deg, #0099cc 30%, #33b5e5 90%)',
+                                                transform: 'translateY(-1px)',
+                                                boxShadow: '0 8px 25px rgba(0, 191, 255, 0.4)',
+                                            },
+                                            '&:disabled': {
+                                                background: 'linear-gradient(45deg, #666 30%, #888 90%)',
+                                                color: '#ccc',
+                                                transform: 'none',
+                                                boxShadow: 'none',
+                                            }
+                                        }}
+                                    >
+                                        {loading ? 'Signing In...' : 'Sign In'}
+                                    </Button>
+                                </Box>
+                            </Slide>
+                        )}
+
+                        {/* Signup Form */}
+                        {tab === 1 && (
+                            <Slide direction="left" in={tab === 1} mountOnEnter unmountOnExit timeout={300}>
+                                <Box component="form" onSubmit={handleSignup} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                    {signupError && (
+                                        <Alert
+                                            severity="error"
+                                            sx={{
+                                                bgcolor: 'rgba(244, 67, 54, 0.1)',
+                                                color: '#ff5252',
+                                                border: '1px solid rgba(244, 67, 54, 0.3)',
+                                                borderRadius: 2,
+                                                '& .MuiAlert-icon': { color: '#ff5252' }
+                                            }}
+                                        >
+                                            {signupError}
+                                        </Alert>
+                                    )}
+
+                                    <TextField
+                                        label="Full Name"
+                                        variant="outlined"
+                                        value={signupFullName}
+                                        onChange={e => setSignupFullName(e.target.value)}
+                                        fullWidth
+                                        required
+                                        disabled={loading}
+                                        InputProps={{
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <PersonIcon sx={{ color: '#b3eaff', fontSize: 20 }} />
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: 2,
+                                                bgcolor: 'rgba(179, 234, 255, 0.03)',
+                                                backdropFilter: 'blur(10px)',
+                                                transition: 'all 0.2s ease',
+                                                '& fieldset': {
+                                                    borderColor: 'rgba(179, 234, 255, 0.3)',
+                                                    borderWidth: 1.5,
+                                                },
+                                                '&:hover fieldset': {
+                                                    borderColor: 'rgba(179, 234, 255, 0.5)',
+                                                },
+                                                '&.Mui-focused fieldset': {
+                                                    borderColor: '#00bfff',
+                                                    boxShadow: '0 0 0 3px rgba(0, 191, 255, 0.1)',
+                                                },
+                                            },
+                                            '& .MuiInputBase-input': {
+                                                color: '#e0e1dd',
+                                                fontSize: '1rem',
+                                            },
+                                            '& .MuiInputLabel-root': {
+                                                color: '#b3eaff',
+                                                fontWeight: 500,
+                                            },
+                                        }}
+                                    />
+
+                                    <TextField
+                                        label="Email Address"
+                                        type="email"
+                                        variant="outlined"
+                                        value={signupEmail}
+                                        onChange={e => setSignupEmail(e.target.value)}
+                                        fullWidth
+                                        required
+                                        disabled={loading}
+                                        InputProps={{
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <EmailIcon sx={{ color: '#b3eaff', fontSize: 20 }} />
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: 2,
+                                                bgcolor: 'rgba(179, 234, 255, 0.03)',
+                                                backdropFilter: 'blur(10px)',
+                                                transition: 'all 0.2s ease',
+                                                '& fieldset': {
+                                                    borderColor: 'rgba(179, 234, 255, 0.3)',
+                                                    borderWidth: 1.5,
+                                                },
+                                                '&:hover fieldset': {
+                                                    borderColor: 'rgba(179, 234, 255, 0.5)',
+                                                },
+                                                '&.Mui-focused fieldset': {
+                                                    borderColor: '#00bfff',
+                                                    boxShadow: '0 0 0 3px rgba(0, 191, 255, 0.1)',
+                                                },
+                                            },
+                                            '& .MuiInputBase-input': {
+                                                color: '#e0e1dd',
+                                                fontSize: '1rem',
+                                            },
+                                            '& .MuiInputLabel-root': {
+                                                color: '#b3eaff',
+                                                fontWeight: 500,
+                                            },
+                                        }}
+                                    />
+
+                                    <TextField
+                                        label="Password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        variant="outlined"
+                                        value={signupPassword}
+                                        onChange={e => setSignupPassword(e.target.value)}
+                                        fullWidth
+                                        required
+                                        disabled={loading}
+                                        InputProps={{
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <LockIcon sx={{ color: '#b3eaff', fontSize: 20 }} />
+                                                </InputAdornment>
+                                            ),
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <IconButton
+                                                        onClick={() => setShowPassword(!showPassword)}
+                                                        edge="end"
+                                                        sx={{ color: '#b3eaff' }}
+                                                    >
+                                                        {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: 2,
+                                                bgcolor: 'rgba(179, 234, 255, 0.03)',
+                                                backdropFilter: 'blur(10px)',
+                                                transition: 'all 0.2s ease',
+                                                '& fieldset': {
+                                                    borderColor: 'rgba(179, 234, 255, 0.3)',
+                                                    borderWidth: 1.5,
+                                                },
+                                                '&:hover fieldset': {
+                                                    borderColor: 'rgba(179, 234, 255, 0.5)',
+                                                },
+                                                '&.Mui-focused fieldset': {
+                                                    borderColor: '#00bfff',
+                                                    boxShadow: '0 0 0 3px rgba(0, 191, 255, 0.1)',
+                                                },
+                                            },
+                                            '& .MuiInputBase-input': {
+                                                color: '#e0e1dd',
+                                                fontSize: '1rem',
+                                            },
+                                            '& .MuiInputLabel-root': {
+                                                color: '#b3eaff',
+                                                fontWeight: 500,
+                                            },
+                                        }}
+                                    />
+
+                                    <TextField
+                                        label="Confirm Password"
+                                        type={showConfirmPassword ? 'text' : 'password'}
+                                        variant="outlined"
+                                        value={signupConfirm}
+                                        onChange={e => setSignupConfirm(e.target.value)}
+                                        fullWidth
+                                        required
+                                        disabled={loading}
+                                        InputProps={{
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <LockIcon sx={{ color: '#b3eaff', fontSize: 20 }} />
+                                                </InputAdornment>
+                                            ),
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <IconButton
+                                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                        edge="end"
+                                                        sx={{ color: '#b3eaff' }}
+                                                    >
+                                                        {showConfirmPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: 2,
+                                                bgcolor: 'rgba(179, 234, 255, 0.03)',
+                                                backdropFilter: 'blur(10px)',
+                                                transition: 'all 0.2s ease',
+                                                '& fieldset': {
+                                                    borderColor: 'rgba(179, 234, 255, 0.3)',
+                                                    borderWidth: 1.5,
+                                                },
+                                                '&:hover fieldset': {
+                                                    borderColor: 'rgba(179, 234, 255, 0.5)',
+                                                },
+                                                '&.Mui-focused fieldset': {
+                                                    borderColor: '#00bfff',
+                                                    boxShadow: '0 0 0 3px rgba(0, 191, 255, 0.1)',
+                                                },
+                                            },
+                                            '& .MuiInputBase-input': {
+                                                color: '#e0e1dd',
+                                                fontSize: '1rem',
+                                            },
+                                            '& .MuiInputLabel-root': {
+                                                color: '#b3eaff',
+                                                fontWeight: 500,
+                                            },
+                                        }}
+                                    />
+
+                                    <Button
+                                        type="submit"
+                                        variant="contained"
+                                        disabled={loading}
+                                        size="large"
+                                        startIcon={loading ? <CircularProgress size={20} sx={{ color: '#0d1b2a' }} /> : <PersonAddIcon />}
+                                        sx={{
+                                            background: 'linear-gradient(45deg, #00bfff 30%, #40c4ff 90%)',
+                                            color: '#0d1b2a',
+                                            borderRadius: 2,
+                                            py: 1.5,
+                                            fontWeight: 600,
+                                            fontSize: '1rem',
+                                            textTransform: 'none',
+                                            boxShadow: '0 6px 20px rgba(0, 191, 255, 0.3)',
+                                            transition: 'all 0.2s ease',
+                                            '&:hover': {
+                                                background: 'linear-gradient(45deg, #0099cc 30%, #33b5e5 90%)',
+                                                transform: 'translateY(-1px)',
+                                                boxShadow: '0 8px 25px rgba(0, 191, 255, 0.4)',
+                                            },
+                                            '&:disabled': {
+                                                background: 'linear-gradient(45deg, #666 30%, #888 90%)',
+                                                color: '#ccc',
+                                                transform: 'none',
+                                                boxShadow: 'none',
+                                            }
+                                        }}
+                                    >
+                                        {loading ? 'Creating Account...' : 'Create Account'}
+                                    </Button>
+                                </Box>
+                            </Slide>
+                        )}
+                    </Box>
+                </Box>
+            </Fade>
         </Modal>
     );
 }

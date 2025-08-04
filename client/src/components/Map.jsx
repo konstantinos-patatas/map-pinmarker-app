@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Box, CircularProgress, Alert, Fab } from '@mui/material';
-import { MapContainer, TileLayer, Marker, useMapEvents, LayersControl } from 'react-leaflet';
+import { Box, CircularProgress, Alert, Fab, Paper, Typography, IconButton, Tooltip, Card, CardContent, Chip } from '@mui/material';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
@@ -10,6 +10,11 @@ import PinPopUp from "./PinPopUp.jsx";
 import UserLocationIcon from "../icons/UserLocationIcon.jsx";
 import HeartIcon from "../icons/HeartIcon.jsx";
 import ParkingIcon from "../icons/ParkingIcon.jsx";
+import MapIcon from '@mui/icons-material/Map';
+import SatelliteIcon from '@mui/icons-material/Satellite';
+import LayersIcon from '@mui/icons-material/Layers';
+import CloseIcon from '@mui/icons-material/Close';
+import CheckIcon from '@mui/icons-material/Check';
 
 
 // Component to handle map clicks
@@ -47,6 +52,33 @@ export default function Map({ onMapClick, currentUser }) {
 
     //state to hold favorite pins of the user and fetch on mount if user is logged in if not then empty
     const [favoriteIds, setFavoriteIds] = useState([]);
+
+    // New state for continuous location tracking
+    const [locationWatchId, setLocationWatchId] = useState(null);
+    const [locationAccuracy, setLocationAccuracy] = useState(null);
+
+    // Custom layers control state
+    const [currentLayer, setCurrentLayer] = useState('street');
+    const [layersPanelOpen, setLayersPanelOpen] = useState(false);
+
+    // Layer options configuration
+    const layerOptions = [
+        {
+            id: 'street',
+            label: 'Street',
+            description: 'Detailed street map with roads and landmarks',
+            icon: MapIcon,
+            gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        },
+        {
+            id: 'satellite',
+            label: 'Satellite',
+            description: 'High-resolution satellite imagery',
+            icon: SatelliteIcon,
+            gradient: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)'
+        }
+    ];
+
     useEffect(() => {
         if (!currentUser?.uid) {
             setFavoriteIds([]); // Clear out any old data if user logs out
@@ -66,7 +98,7 @@ export default function Map({ onMapClick, currentUser }) {
     // fallback position - Limassol, Cyprus
     const fallbackPosition = { lat: 34.67503960521671, lng: 33.043841190472115 };
 
-    // function to get user location
+    // Enhanced geolocation function with iPhone-specific improvements
     const getUserLocation = () => {
         setLoading(true);
         setError(null);
@@ -77,20 +109,137 @@ export default function Map({ onMapClick, currentUser }) {
             return;
         }
 
-        navigator.geolocation.getCurrentPosition(
+        // Enhanced options for better iOS compatibility
+        const options = {
+            enableHighAccuracy: true,
+            timeout: 15000, // 15 seconds timeout (increased for iOS)
+            maximumAge: 60000, // Accept cached position up to 1 minute old
+        };
+
+        // First attempt with high accuracy
+        const getPositionWithFallback = () => {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    console.log('High accuracy position obtained:', pos);
+                    setPosition({
+                        lat: pos.coords.latitude,
+                        lng: pos.coords.longitude,
+                    });
+                    setLoading(false);
+                },
+                (error) => {
+                    console.log('High accuracy failed, trying low accuracy:', error);
+
+                    // Fallback to low accuracy if high accuracy fails
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                            console.log('Low accuracy position obtained:', pos);
+                            setPosition({
+                                lat: pos.coords.latitude,
+                                lng: pos.coords.longitude,
+                            });
+                            setLoading(false);
+                        },
+                        (fallbackError) => {
+                            console.log('All geolocation attempts failed:', fallbackError);
+
+                            // Provide specific error messages for different error codes
+                            let errorMessage = 'Unable to retrieve your location';
+
+                            switch (fallbackError.code) {
+                                case fallbackError.PERMISSION_DENIED:
+                                    errorMessage = 'Location access denied. Please enable location services in your browser settings and try again.';
+                                    break;
+                                case fallbackError.POSITION_UNAVAILABLE:
+                                    errorMessage = 'Location information is unavailable. Please check your device\'s location services.';
+                                    break;
+                                case fallbackError.TIMEOUT:
+                                    errorMessage = 'Location request timed out. Please try again or check your internet connection.';
+                                    break;
+                                default:
+                                    errorMessage = 'Unable to retrieve your location. Please check your device settings and try again.';
+                            }
+
+                            setError(errorMessage);
+                            setLoading(false);
+                        },
+                        {
+                            enableHighAccuracy: false,
+                            timeout: 10000,
+                            maximumAge: 300000, // Accept cached position up to 5 minutes old
+                        }
+                    );
+                },
+                options
+            );
+        };
+
+        // Check if we're on iOS Safari and provide specific guidance
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+
+        if (isIOS && isSafari) {
+            console.log('iOS Safari detected - using enhanced geolocation handling');
+        }
+
+        // Start the geolocation process
+        getPositionWithFallback();
+    };
+
+    // Function to start continuous location tracking
+    const startLocationTracking = () => {
+        if (!navigator.geolocation) {
+            console.log('Geolocation not supported');
+            return;
+        }
+
+        // Clear any existing watch
+        if (locationWatchId) {
+            navigator.geolocation.clearWatch(locationWatchId);
+        }
+
+        const watchId = navigator.geolocation.watchPosition(
             (pos) => {
+                console.log('Location updated:', pos);
                 setPosition({
                     lat: pos.coords.latitude,
                     lng: pos.coords.longitude,
                 });
-                setLoading(false);
+                setLocationAccuracy(pos.coords.accuracy);
+                setError(null); // Clear any previous errors
             },
-            () => {
-                setError('Unable to retrieve your location');
-                setLoading(false);
+            (error) => {
+                console.log('Location tracking error:', error);
+                // Don't set error for watch position failures, just log them
             },
-            { enableHighAccuracy: true }
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 30000, // Accept cached position up to 30 seconds old
+            }
         );
+
+        setLocationWatchId(watchId);
+        console.log('Started continuous location tracking');
+    };
+
+    // Cleanup function for location tracking
+    const stopLocationTracking = () => {
+        if (locationWatchId) {
+            navigator.geolocation.clearWatch(locationWatchId);
+            setLocationWatchId(null);
+            console.log('Stopped continuous location tracking');
+        }
+    };
+
+    // Handle layer change
+    const handleLayerChange = (layerId) => {
+        setCurrentLayer(layerId);
+    };
+
+    // Toggle layers panel
+    const toggleLayersPanel = () => {
+        setLayersPanelOpen(!layersPanelOpen);
     };
 
     // Handle pin click
@@ -139,10 +288,28 @@ export default function Map({ onMapClick, currentUser }) {
         };
     }, []);
 
-    // get location automatically on mount
+    // get user location automatically on mount
     useEffect(() => {
         getUserLocation();
-        // Note: pins are now loaded via real-time listener above
+    }, []);
+
+    // Start continuous location tracking after initial location is obtained
+    useEffect(() => {
+        if (position && !locationWatchId) {
+            // Small delay to ensure initial location is set
+            const timer = setTimeout(() => {
+                startLocationTracking();
+            }, 1000);
+
+            return () => clearTimeout(timer);
+        }
+    }, [position, locationWatchId]);
+
+    // Cleanup location tracking on unmount
+    useEffect(() => {
+        return () => {
+            stopLocationTracking();
+        };
     }, []);
 
     if (loading || pinsLoading) {
@@ -195,6 +362,33 @@ export default function Map({ onMapClick, currentUser }) {
                 </Alert>
             )}
 
+            {/* iPhone-specific location guidance */}
+            {/iPad|iPhone|iPod/.test(navigator.userAgent) && !position && !loading && (
+                <Alert
+                    severity="info"
+                    onClose={() => {}}
+                    sx={{
+                        position: 'absolute',
+                        top: 16,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        zIndex: 10000,
+                        width: '90%',
+                        maxWidth: 600,
+                    }}
+                >
+                    <strong>iPhone Location Tips:</strong>
+                    <br />
+                    • Make sure Location Services are enabled in Settings → Privacy → Location Services
+                    <br />
+                    • Allow location access when prompted by Safari
+                    <br />
+                    • Try refreshing the page if location doesn't work initially
+                    <br />
+                    • Ensure you're using Safari (not Chrome/Firefox) for best compatibility
+                </Alert>
+            )}
+
             <MapContainer
                 center={[position?.lat || fallbackPosition.lat, position?.lng || fallbackPosition.lng]}
                 zoom={22}
@@ -202,22 +396,21 @@ export default function Map({ onMapClick, currentUser }) {
                 scrollWheelZoom={true}
                 attributionControl={false}
             >
-                {/*adding layer where you can see normal and satellite map*/}
-                <LayersControl position="bottomleft">
-                    <LayersControl.BaseLayer checked name="Street View">
-                        <TileLayer
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            attribution="&copy; OpenStreetMap contributors"
-                        />
-                    </LayersControl.BaseLayer>
+                {/* Custom layers control - Street View */}
+                {currentLayer === 'street' && (
+                    <TileLayer
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        attribution="&copy; OpenStreetMap contributors"
+                    />
+                )}
 
-                    <LayersControl.BaseLayer name="Satellite View">
-                        <TileLayer
-                            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                            attribution="Tiles &copy; Esri"
-                        />
-                    </LayersControl.BaseLayer>
-                </LayersControl>
+                {/* Custom layers control - Satellite View */}
+                {currentLayer === 'satellite' && (
+                    <TileLayer
+                        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                        attribution="Tiles &copy; Esri"
+                    />
+                )}
 
                 {/* User location marker */}
                 {position && <Marker position={[position.lat, position.lng]} icon={UserLocationIcon} />}
@@ -249,18 +442,278 @@ export default function Map({ onMapClick, currentUser }) {
 
             {/* Floating "Locate Me" button */}
             <Fab
-                color="primary"
                 aria-label="locate me"
-                onClick={getUserLocation}
+                onClick={() => {
+                    stopLocationTracking();
+                    getUserLocation();
+                }}
                 sx={{
                     position: 'absolute',
                     bottom: 24,
                     right: 24,
                     zIndex: 1000,
+                    background: 'linear-gradient(135deg, rgba(13, 27, 42, 0.98) 0%, rgba(25, 45, 65, 0.95) 100%)',
+                    color: 'white',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    backdropFilter: 'blur(10px)',
+                    '&:hover': {
+                        background: 'linear-gradient(135deg, rgba(13, 27, 42, 1) 0%, rgba(25, 45, 65, 1) 100%)',
+                        boxShadow: '0 6px 16px rgba(0, 0, 0, 0.4)',
+                        transform: 'translateY(-1px)',
+                    },
+                    '&:active': {
+                        transform: 'translateY(0px)',
+                    },
                 }}
             >
                 <MyLocationIcon />
             </Fab>
+
+            {/* Modern Layers Control */}
+            <Box
+                sx={{
+                    position: 'absolute',
+                    bottom: 24,
+                    left: 24,
+                    zIndex: 1000,
+                }}
+            >
+                {/* Layers Toggle Button */}
+                <Tooltip title="Map Layers" placement="top">
+                    <Fab
+                        size="medium"
+                        onClick={toggleLayersPanel}
+                        sx={{
+                            background: 'linear-gradient(135deg, rgba(13, 27, 42, 0.98) 0%, rgba(25, 45, 65, 0.95) 100%)',
+                            color: 'white',
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            backdropFilter: 'blur(10px)',
+                            '&:hover': {
+                                background: 'linear-gradient(135deg, rgba(13, 27, 42, 1) 0%, rgba(25, 45, 65, 1) 100%)',
+                                boxShadow: '0 6px 16px rgba(0, 0, 0, 0.4)',
+                                transform: 'translateY(-1px)',
+                            },
+                            '&:active': {
+                                transform: 'translateY(0px)',
+                            },
+                        }}
+                    >
+                        <LayersIcon />
+                    </Fab>
+                </Tooltip>
+
+                {/* Modern Layers Panel */}
+                {layersPanelOpen && (
+                    <Paper
+                        elevation={0}
+                        sx={{
+                            position: 'absolute',
+                            bottom: 60,
+                            left: 0,
+                            p: 0,
+                            minWidth: 320,
+                            background: 'linear-gradient(135deg, rgba(13, 27, 42, 0.98) 0%, rgba(25, 45, 65, 0.95) 100%)',
+                            backdropFilter: 'blur(24px)',
+                            borderRadius: 4,
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+                            overflow: 'hidden',
+                            animation: 'slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            '@keyframes slideUp': {
+                                from: {
+                                    transform: 'translateY(20px)',
+                                    opacity: 0,
+                                },
+                                to: {
+                                    transform: 'translateY(0)',
+                                    opacity: 1,
+                                },
+                            },
+                        }}
+                    >
+                        {/* Header */}
+                        <Box sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            p: 3,
+                            pb: 2
+                        }}>
+                            <Box>
+                                <Typography
+                                    variant="h6"
+                                    fontWeight="700"
+                                    color="white"
+                                    sx={{ fontSize: '1rem', letterSpacing: '-0.025em' }}
+                                >
+                                    Map Style
+                                </Typography>
+                                <Typography
+                                    variant="caption"
+                                    color="rgba(255, 255, 255, 0.7)"
+                                    sx={{ fontSize: '0.75rem', mt: 0.5 }}
+                                >
+                                    Choose your preferred view
+                                </Typography>
+                            </Box>
+                            <IconButton
+                                size="small"
+                                onClick={toggleLayersPanel}
+                                sx={{
+                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                    width: 32,
+                                    height: 32,
+                                    '&:hover': {
+                                        color: 'white',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                    }
+                                }}
+                            >
+                                <CloseIcon fontSize="small" />
+                            </IconButton>
+                        </Box>
+
+                        {/* Layer Options */}
+                        <Box sx={{ px: 3, pb: 3 }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                {layerOptions.map((layer) => {
+                                    const IconComponent = layer.icon;
+                                    const isSelected = currentLayer === layer.id;
+
+                                    return (
+                                        <Card
+                                            key={layer.id}
+                                            onClick={() => handleLayerChange(layer.id)}
+                                            sx={{
+                                                cursor: 'pointer',
+                                                border: isSelected
+                                                    ? '2px solid rgba(99, 179, 237, 0.8)'
+                                                    : '1px solid rgba(255, 255, 255, 0.2)',
+                                                borderRadius: 3,
+                                                backgroundColor: isSelected
+                                                    ? 'rgba(99, 179, 237, 0.15)'
+                                                    : 'rgba(255, 255, 255, 0.08)',
+                                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+                                                boxShadow: isSelected
+                                                    ? '0 4px 20px rgba(99, 179, 237, 0.3)'
+                                                    : '0 2px 8px rgba(0, 0, 0, 0.2)',
+                                                '&:hover': {
+                                                    transform: 'scale(1.02)',
+                                                    boxShadow: '0 6px 24px rgba(0, 0, 0, 0.3)',
+                                                    borderColor: isSelected
+                                                        ? 'rgba(99, 179, 237, 0.9)'
+                                                        : 'rgba(255, 255, 255, 0.3)',
+                                                    backgroundColor: isSelected
+                                                        ? 'rgba(99, 179, 237, 0.2)'
+                                                        : 'rgba(255, 255, 255, 0.12)',
+                                                }
+                                            }}
+                                        >
+                                            <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                                                    {/* Preview */}
+                                                    <Box
+                                                        sx={{
+                                                            width: 48,
+                                                            height: 48,
+                                                            borderRadius: 2,
+                                                            background: layer.gradient,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            flexShrink: 0,
+                                                            position: 'relative',
+                                                            overflow: 'hidden'
+                                                        }}
+                                                    >
+                                                        <IconComponent
+                                                            sx={{
+                                                                color: 'white',
+                                                                fontSize: '1.25rem',
+                                                                filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2))'
+                                                            }}
+                                                        />
+                                                    </Box>
+
+                                                    {/* Content */}
+                                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                                            <Typography
+                                                                variant="subtitle2"
+                                                                fontWeight="600"
+                                                                color="white"
+                                                                sx={{ fontSize: '0.875rem' }}
+                                                            >
+                                                                {layer.label}
+                                                            </Typography>
+                                                            {isSelected && (
+                                                                <Chip
+                                                                    icon={<CheckIcon sx={{ fontSize: '0.875rem' }} />}
+                                                                    label="Active"
+                                                                    size="small"
+                                                                    sx={{
+                                                                        height: 20,
+                                                                        fontSize: '0.75rem',
+                                                                        fontWeight: 600,
+                                                                        backgroundColor: 'rgba(99, 179, 237, 0.9)',
+                                                                        color: 'white',
+                                                                        border: '1px solid rgba(99, 179, 237, 0.3)',
+                                                                        '& .MuiChip-icon': {
+                                                                            color: 'white',
+                                                                            fontSize: '0.75rem'
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            )}
+                                                        </Box>
+                                                        <Typography
+                                                            variant="body2"
+                                                            color="rgba(255, 255, 255, 0.7)"
+                                                            sx={{
+                                                                fontSize: '0.75rem',
+                                                                lineHeight: 1.4
+                                                            }}
+                                                        >
+                                                            {layer.description}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+                                            </CardContent>
+                                        </Card>
+                                    );
+                                })}
+                            </Box>
+                        </Box>
+                    </Paper>
+                )}
+            </Box>
+
+            {/* Location accuracy indicator */}
+            {locationAccuracy && (
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        bottom: 80,
+                        right: 24,
+                        zIndex: 1000,
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        color: 'white',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                    }}
+                >
+                    <MyLocationIcon sx={{ fontSize: '16px' }} />
+                    {locationAccuracy < 10 ? 'High' : locationAccuracy < 50 ? 'Medium' : 'Low'} accuracy
+                </Box>
+            )}
 
             <Box
                 component={'div'}
