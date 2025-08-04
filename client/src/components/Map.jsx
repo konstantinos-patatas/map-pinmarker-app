@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, CircularProgress, Alert, Fab, Paper, Typography, IconButton, Tooltip, Card, CardContent, Chip } from '@mui/material';
+import { Box, CircularProgress, Alert, Fab, Paper, Typography, IconButton, Tooltip, Card, CardContent, Chip, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Grid, List, ListItem, ListItemIcon, ListItemText, Divider } from '@mui/material';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
@@ -15,6 +15,10 @@ import SatelliteIcon from '@mui/icons-material/Satellite';
 import LayersIcon from '@mui/icons-material/Layers';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckIcon from '@mui/icons-material/Check';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import PublicIcon from '@mui/icons-material/Public';
+import EditLocationIcon from '@mui/icons-material/EditLocation';
+import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 
 
 // Component to handle map clicks
@@ -29,13 +33,13 @@ function MapClickHandler({ onMapClick }) {
 }
 
 //helper react function to programmatically change location when user navigates elsewhere
-function RecenterMap({ lat, lng }) {
+function RecenterMap({ lat, lng, shouldRecenter }) {
     const map = useMapEvents({});
     React.useEffect(() => {
-        if (lat && lng) {
+        if (lat && lng && shouldRecenter) {
             map.setView([lat, lng], 22, { animate: true });
         }
-    }, [lat, lng, map]);
+    }, [lat, lng, shouldRecenter, map]);
     return null;
 }
 
@@ -60,6 +64,14 @@ export default function Map({ onMapClick, currentUser }) {
     // Custom layers control state
     const [currentLayer, setCurrentLayer] = useState('street');
     const [layersPanelOpen, setLayersPanelOpen] = useState(false);
+
+    // Enhanced location tracking state
+    const [locationMethod, setLocationMethod] = useState(null); // 'gps', 'ip', 'manual'
+    const [locationPermission, setLocationPermission] = useState('unknown'); // 'granted', 'denied', 'unknown'
+    const [showLocationOptions, setShowLocationOptions] = useState(false);
+    const [manualLocationInput, setManualLocationInput] = useState({ lat: '', lng: '' });
+    const [showManualInput, setShowManualInput] = useState(false);
+    const [shouldRecenterMap, setShouldRecenterMap] = useState(true); // Only recenter on initial load or manual request
 
     // Layer options configuration
     const layerOptions = [
@@ -102,6 +114,7 @@ export default function Map({ onMapClick, currentUser }) {
     const getUserLocation = () => {
         setLoading(true);
         setError(null);
+        setShouldRecenterMap(true); // Recenter when user explicitly requests location
 
         if (!navigator.geolocation) {
             setError('Geolocation is not supported by your browser');
@@ -125,11 +138,13 @@ export default function Map({ onMapClick, currentUser }) {
                         lat: pos.coords.latitude,
                         lng: pos.coords.longitude,
                     });
+                    setLocationMethod('gps');
+                    setLocationPermission('granted');
                     setLoading(false);
                 },
                 (error) => {
                     console.log('High accuracy failed, trying low accuracy:', error);
-
+                    
                     // Fallback to low accuracy if high accuracy fails
                     navigator.geolocation.getCurrentPosition(
                         (pos) => {
@@ -138,30 +153,15 @@ export default function Map({ onMapClick, currentUser }) {
                                 lat: pos.coords.latitude,
                                 lng: pos.coords.longitude,
                             });
+                            setLocationMethod('gps');
+                            setLocationPermission('granted');
                             setLoading(false);
                         },
                         (fallbackError) => {
                             console.log('All geolocation attempts failed:', fallbackError);
-
-                            // Provide specific error messages for different error codes
-                            let errorMessage = 'Unable to retrieve your location';
-
-                            switch (fallbackError.code) {
-                                case fallbackError.PERMISSION_DENIED:
-                                    errorMessage = 'Location access denied. Please enable location services in your browser settings and try again.';
-                                    break;
-                                case fallbackError.POSITION_UNAVAILABLE:
-                                    errorMessage = 'Location information is unavailable. Please check your device\'s location services.';
-                                    break;
-                                case fallbackError.TIMEOUT:
-                                    errorMessage = 'Location request timed out. Please try again or check your internet connection.';
-                                    break;
-                                default:
-                                    errorMessage = 'Unable to retrieve your location. Please check your device settings and try again.';
-                            }
-
-                            setError(errorMessage);
-                            setLoading(false);
+                            
+                            // Try IP-based location as fallback
+                            getLocationByIP();
                         },
                         {
                             enableHighAccuracy: false,
@@ -177,13 +177,94 @@ export default function Map({ onMapClick, currentUser }) {
         // Check if we're on iOS Safari and provide specific guidance
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
         const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-
+        
         if (isIOS && isSafari) {
             console.log('iOS Safari detected - using enhanced geolocation handling');
         }
 
         // Start the geolocation process
         getPositionWithFallback();
+    };
+
+    // IP-based location detection
+    const getLocationByIP = async () => {
+        try {
+            console.log('Attempting IP-based location detection...');
+            setShouldRecenterMap(true); // Recenter when user explicitly requests location
+            
+            // Try multiple IP geolocation services for redundancy
+            const services = [
+                'https://ipapi.co/json/',
+                'https://ip-api.com/json/',
+                'https://api.ipgeolocation.io/ipgeo?apiKey=free'
+            ];
+
+            for (const service of services) {
+                try {
+                    const response = await fetch(service, { 
+                        timeout: 5000,
+                        signal: AbortSignal.timeout(5000)
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        
+                        if (data.latitude && data.longitude) {
+                            console.log('IP-based location obtained:', data);
+                            setPosition({
+                                lat: parseFloat(data.latitude),
+                                lng: parseFloat(data.longitude),
+                            });
+                            setLocationMethod('ip');
+                            setLocationPermission('granted');
+                            setLoading(false);
+                            return;
+                        }
+                    }
+                } catch (serviceError) {
+                    console.log(`Service ${service} failed:`, serviceError);
+                    continue;
+                }
+            }
+            
+            // If all IP services fail, show manual location options
+            setShowLocationOptions(true);
+            setLoading(false);
+            
+        } catch (error) {
+            console.error('IP-based location failed:', error);
+            setShowLocationOptions(true);
+            setLoading(false);
+        }
+    };
+
+    // Manual location input
+    const applyManualLocation = (lat, lng) => {
+        setPosition({ lat, lng });
+        setLocationMethod('manual');
+        setShowLocationOptions(false);
+        setError(null);
+        setShouldRecenterMap(true); // Recenter when user manually sets location
+    };
+
+    // Check location permission status
+    const checkLocationPermission = async () => {
+        if (!navigator.permissions) {
+            setLocationPermission('unknown');
+            return;
+        }
+
+        try {
+            const permission = await navigator.permissions.query({ name: 'geolocation' });
+            setLocationPermission(permission.state);
+            
+            permission.onchange = () => {
+                setLocationPermission(permission.state);
+            };
+        } catch (error) {
+            console.log('Permission check failed:', error);
+            setLocationPermission('unknown');
+        }
     };
 
     // Function to start continuous location tracking
@@ -207,6 +288,8 @@ export default function Map({ onMapClick, currentUser }) {
                 });
                 setLocationAccuracy(pos.coords.accuracy);
                 setError(null); // Clear any previous errors
+                // Don't recenter map during continuous tracking
+                setShouldRecenterMap(false);
             },
             (error) => {
                 console.log('Location tracking error:', error);
@@ -290,6 +373,7 @@ export default function Map({ onMapClick, currentUser }) {
 
     // get user location automatically on mount
     useEffect(() => {
+        checkLocationPermission();
         getUserLocation();
     }, []);
 
@@ -300,7 +384,7 @@ export default function Map({ onMapClick, currentUser }) {
             const timer = setTimeout(() => {
                 startLocationTracking();
             }, 1000);
-
+            
             return () => clearTimeout(timer);
         }
     }, [position, locationWatchId]);
@@ -437,6 +521,7 @@ export default function Map({ onMapClick, currentUser }) {
                 <RecenterMap
                     lat={position?.lat || fallbackPosition.lat}
                     lng={position?.lng || fallbackPosition.lng}
+                    shouldRecenter={shouldRecenterMap}
                 />
             </MapContainer>
 
@@ -445,6 +530,7 @@ export default function Map({ onMapClick, currentUser }) {
                 aria-label="locate me"
                 onClick={() => {
                     stopLocationTracking();
+                    setShouldRecenterMap(true); // Explicitly recenter when user clicks locate button
                     getUserLocation();
                 }}
                 sx={{
@@ -700,18 +786,29 @@ export default function Map({ onMapClick, currentUser }) {
                         bottom: 80,
                         right: 24,
                         zIndex: 1000,
-                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
                         color: 'white',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
                         fontSize: '12px',
                         display: 'flex',
                         alignItems: 'center',
                         gap: 1,
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
                     }}
                 >
                     <MyLocationIcon sx={{ fontSize: '16px' }} />
-                    {locationAccuracy < 10 ? 'High' : locationAccuracy < 50 ? 'Medium' : 'Low'} accuracy
+                    <Box>
+                        <Box sx={{ fontWeight: 600 }}>
+                            {locationAccuracy < 10 ? 'High' : locationAccuracy < 50 ? 'Medium' : 'Low'} accuracy
+                        </Box>
+                        <Box sx={{ fontSize: '10px', opacity: 0.8 }}>
+                            {locationMethod === 'gps' && 'GPS Location'}
+                            {locationMethod === 'ip' && 'IP Location'}
+                            {locationMethod === 'manual' && 'Manual Location'}
+                        </Box>
+                    </Box>
                 </Box>
             )}
 
@@ -735,6 +832,257 @@ export default function Map({ onMapClick, currentUser }) {
                     onClose={handleDrawerClose}
                 />
             )}
+
+            {/* Location Options Modal */}
+            <Dialog
+                open={showLocationOptions}
+                onClose={() => setShowLocationOptions(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        background: 'linear-gradient(135deg, rgba(13, 27, 42, 0.98) 0%, rgba(25, 45, 65, 0.95) 100%)',
+                        backdropFilter: 'blur(20px)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: 3,
+                    }
+                }}
+            >
+                <DialogTitle sx={{ color: 'white', pb: 1 }}>
+                    <Typography variant="h6" fontWeight="700">
+                        Location Access
+                    </Typography>
+                    <Typography variant="body2" color="rgba(255, 255, 255, 0.7)" sx={{ mt: 1 }}>
+                        Choose how to get your location
+                    </Typography>
+                </DialogTitle>
+                <DialogContent sx={{ pt: 2 }}>
+                    <List sx={{ p: 0 }}>
+                        <ListItem
+                            button
+                            onClick={() => {
+                                setShowLocationOptions(false);
+                                getUserLocation();
+                            }}
+                            sx={{
+                                borderRadius: 2,
+                                mb: 1,
+                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                                }
+                            }}
+                        >
+                            <ListItemIcon>
+                                <GpsFixedIcon sx={{ color: 'white' }} />
+                            </ListItemIcon>
+                            <ListItemText
+                                primary="Use GPS Location"
+                                secondary="Most accurate location using your device's GPS"
+                                sx={{
+                                    '& .MuiListItemText-primary': { color: 'white', fontWeight: 600 },
+                                    '& .MuiListItemText-secondary': { color: 'rgba(255, 255, 255, 0.7)' }
+                                }}
+                            />
+                        </ListItem>
+
+                        <ListItem
+                            button
+                            onClick={() => {
+                                setShowLocationOptions(false);
+                                getLocationByIP();
+                            }}
+                            sx={{
+                                borderRadius: 2,
+                                mb: 1,
+                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                                }
+                            }}
+                        >
+                            <ListItemIcon>
+                                <PublicIcon sx={{ color: 'white' }} />
+                            </ListItemIcon>
+                            <ListItemText
+                                primary="Use IP Location"
+                                secondary="Approximate location based on your internet connection"
+                                sx={{
+                                    '& .MuiListItemText-primary': { color: 'white', fontWeight: 600 },
+                                    '& .MuiListItemText-secondary': { color: 'rgba(255, 255, 255, 0.7)' }
+                                }}
+                            />
+                        </ListItem>
+
+                        <ListItem
+                            button
+                            onClick={() => {
+                                setShowLocationOptions(false);
+                                setShowManualInput(true);
+                            }}
+                            sx={{
+                                borderRadius: 2,
+                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                                }
+                            }}
+                        >
+                            <ListItemIcon>
+                                <EditLocationIcon sx={{ color: 'white' }} />
+                            </ListItemIcon>
+                            <ListItemText
+                                primary="Enter Location Manually"
+                                secondary="Type in your city or coordinates"
+                                sx={{
+                                    '& .MuiListItemText-primary': { color: 'white', fontWeight: 600 },
+                                    '& .MuiListItemText-secondary': { color: 'rgba(255, 255, 255, 0.7)' }
+                                }}
+                            />
+                        </ListItem>
+                    </List>
+                </DialogContent>
+                <DialogActions sx={{ p: 3, pt: 1 }}>
+                    <Button
+                        onClick={() => setShowLocationOptions(false)}
+                        sx={{
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            '&:hover': { color: 'white' }
+                        }}
+                    >
+                        Cancel
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Manual Location Input Dialog */}
+            <Dialog
+                open={showManualInput}
+                onClose={() => setShowManualInput(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: {
+                        background: 'linear-gradient(135deg, rgba(13, 27, 42, 0.98) 0%, rgba(25, 45, 65, 0.95) 100%)',
+                        backdropFilter: 'blur(20px)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: 3,
+                    }
+                }}
+            >
+                <DialogTitle sx={{ color: 'white' }}>
+                    <Typography variant="h6" fontWeight="700">
+                        Enter Location
+                    </Typography>
+                </DialogTitle>
+                <DialogContent>
+                    <Grid container spacing={2} sx={{ mt: 1 }}>
+                        <Grid item xs={6}>
+                            <TextField
+                                fullWidth
+                                label="Latitude"
+                                type="number"
+                                value={manualLocationInput.lat}
+                                onChange={(e) => setManualLocationInput(prev => ({ ...prev, lat: e.target.value }))}
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        color: 'white',
+                                        '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.3)' },
+                                        '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.5)' },
+                                        '&.Mui-focused fieldset': { borderColor: 'rgba(99, 179, 237, 0.8)' }
+                                    },
+                                    '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.7)' },
+                                    '& .MuiInputLabel-root.Mui-focused': { color: 'rgba(99, 179, 237, 0.8)' }
+                                }}
+                            />
+                        </Grid>
+                        <Grid item xs={6}>
+                            <TextField
+                                fullWidth
+                                label="Longitude"
+                                type="number"
+                                value={manualLocationInput.lng}
+                                onChange={(e) => setManualLocationInput(prev => ({ ...prev, lng: e.target.value }))}
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        color: 'white',
+                                        '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.3)' },
+                                        '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.5)' },
+                                        '&.Mui-focused fieldset': { borderColor: 'rgba(99, 179, 237, 0.8)' }
+                                    },
+                                    '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.7)' },
+                                    '& .MuiInputLabel-root.Mui-focused': { color: 'rgba(99, 179, 237, 0.8)' }
+                                }}
+                            />
+                        </Grid>
+                    </Grid>
+                    
+                    <Box sx={{ mt: 3 }}>
+                        <Typography variant="body2" color="rgba(255, 255, 255, 0.7)" sx={{ mb: 2 }}>
+                            Quick locations:
+                        </Typography>
+                        <Grid container spacing={1}>
+                            {[
+                                { name: 'Limassol, Cyprus', lat: 34.7071, lng: 33.0226 },
+                                { name: 'Nicosia, Cyprus', lat: 35.1856, lng: 33.3823 },
+                                { name: 'Larnaca, Cyprus', lat: 34.9229, lng: 33.6233 },
+                            ].map((location) => (
+                                <Grid item xs={12} sm={4} key={location.name}>
+                                    <Button
+                                        variant="outlined"
+                                        size="small"
+                                        onClick={() => {
+                                            setManualLocationInput({ lat: location.lat, lng: location.lng });
+                                        }}
+                                        sx={{
+                                            color: 'rgba(255, 255, 255, 0.8)',
+                                            borderColor: 'rgba(255, 255, 255, 0.3)',
+                                            '&:hover': {
+                                                borderColor: 'rgba(255, 255, 255, 0.5)',
+                                                color: 'white'
+                                            }
+                                        }}
+                                    >
+                                        {location.name}
+                                    </Button>
+                                </Grid>
+                            ))}
+                        </Grid>
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ p: 3 }}>
+                    <Button
+                        onClick={() => setShowManualInput(false)}
+                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={() => {
+                            if (manualLocationInput.lat && manualLocationInput.lng) {
+                                applyManualLocation(
+                                    parseFloat(manualLocationInput.lat),
+                                    parseFloat(manualLocationInput.lng)
+                                );
+                                setShowManualInput(false);
+                            }
+                        }}
+                        variant="contained"
+                        disabled={!manualLocationInput.lat || !manualLocationInput.lng}
+                        sx={{
+                            background: 'linear-gradient(135deg, rgba(99, 179, 237, 0.8) 0%, rgba(99, 179, 237, 0.6) 100%)',
+                            '&:hover': {
+                                background: 'linear-gradient(135deg, rgba(99, 179, 237, 0.9) 0%, rgba(99, 179, 237, 0.7) 100%)',
+                            }
+                        }}
+                    >
+                        Set Location
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }
