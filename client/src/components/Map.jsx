@@ -66,6 +66,28 @@ export default function Map({ onMapClick, currentUser }) {
     const [locationPermission, setLocationPermission] = useState('unknown'); // 'granted', 'denied', 'unknown'
     const [shouldRecenterMap, setShouldRecenterMap] = useState(true); // Only recenter on initial load or manual request
 
+    // Helper function to detect PWA mode
+    const isPWA = () => {
+        return window.matchMedia('(display-mode: standalone)').matches || 
+               window.navigator.standalone === true;
+    };
+
+    // Helper function to get optimal location strategy for current device
+    const getLocationStrategy = () => {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+        const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                     window.navigator.standalone === true;
+        
+        return {
+            isIOS,
+            isSafari,
+            isPWA,
+            requiresUserInteraction: isIOS && !isPWA, // iOS Safari requires user interaction unless in PWA
+            canAutoRequest: !isIOS || isPWA, // Can auto-request location
+        };
+    };
+
     // Layer options configuration
     const layerOptions = [
         {
@@ -115,11 +137,21 @@ export default function Map({ onMapClick, currentUser }) {
             return;
         }
 
-        // Enhanced options for better iOS compatibility
-        const options = {
+        // iOS-specific optimizations
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+        
+        // Different timeout strategies for iOS vs other devices
+        const highAccuracyOptions = {
             enableHighAccuracy: true,
-            timeout: 15000, // 15 seconds timeout (increased for iOS)
-            maximumAge: 60000, // Accept cached position up to 1 minute old
+            timeout: isIOS ? 10000 : 15000, // Shorter timeout for iOS
+            maximumAge: isIOS ? 30000 : 60000, // Shorter cache for iOS
+        };
+
+        const lowAccuracyOptions = {
+            enableHighAccuracy: false,
+            timeout: isIOS ? 8000 : 10000,
+            maximumAge: isIOS ? 120000 : 300000, // 2 minutes for iOS, 5 for others
         };
 
         // First attempt with high accuracy
@@ -133,10 +165,16 @@ export default function Map({ onMapClick, currentUser }) {
                     });
                     setLocationMethod('gps');
                     setLocationPermission('granted');
+                    setLocationAccuracy(pos.coords.accuracy);
                     setLoading(false);
                 },
                 (error) => {
                     console.log('High accuracy failed, trying low accuracy:', error);
+                    
+                    // For iOS, provide specific error messages
+                    if (isIOS && error.code === 1) {
+                        console.log('iOS: Permission denied - user needs to allow location access');
+                    }
                     
                     // Fallback to low accuracy if high accuracy fails
                     navigator.geolocation.getCurrentPosition(
@@ -148,32 +186,36 @@ export default function Map({ onMapClick, currentUser }) {
                             });
                             setLocationMethod('gps');
                             setLocationPermission('granted');
+                            setLocationAccuracy(pos.coords.accuracy);
                             setLoading(false);
                         },
                         (fallbackError) => {
                             console.log('All geolocation attempts failed:', fallbackError);
                             
+                            // Provide iOS-specific error messages
+                            if (isIOS) {
+                                if (fallbackError.code === 1) {
+                                    setError('Location access denied. Please enable location services in Settings → Privacy → Location Services → Safari and refresh the page.');
+                                } else if (fallbackError.code === 2) {
+                                    setError('Location unavailable. Please check your internet connection and try again.');
+                                } else if (fallbackError.code === 3) {
+                                    setError('Location request timed out. Please try again.');
+                                } else {
+                                    setError('Unable to get your location. Please try again or check your settings.');
+                                }
+                            } else {
+                                setError('Unable to determine your location. Please try again.');
+                            }
+                            
                             // Try IP-based location as fallback
                             getLocationByIP();
                         },
-                        {
-                            enableHighAccuracy: false,
-                            timeout: 10000,
-                            maximumAge: 300000, // Accept cached position up to 5 minutes old
-                        }
+                        lowAccuracyOptions
                     );
                 },
-                options
+                highAccuracyOptions
             );
         };
-
-        // Check if we're on iOS Safari and provide specific guidance
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-        
-        if (isIOS && isSafari) {
-            console.log('iOS Safari detected - using enhanced geolocation handling');
-        }
 
         // Start the geolocation process
         getPositionWithFallback();
@@ -233,7 +275,11 @@ export default function Map({ onMapClick, currentUser }) {
 
     // Check location permission status
     const checkLocationPermission = async () => {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+        
         if (!navigator.permissions) {
+            // Fallback for browsers that don't support permissions API
             setLocationPermission('unknown');
             return;
         }
@@ -244,6 +290,11 @@ export default function Map({ onMapClick, currentUser }) {
             
             permission.onchange = () => {
                 setLocationPermission(permission.state);
+                
+                // For iOS, provide specific guidance when permission changes
+                if (isIOS && permission.state === 'denied') {
+                    console.log('iOS: Location permission denied - user needs to enable in Settings');
+                }
             };
         } catch (error) {
             console.log('Permission check failed:', error);
@@ -263,6 +314,15 @@ export default function Map({ onMapClick, currentUser }) {
             navigator.geolocation.clearWatch(locationWatchId);
         }
 
+        // iOS-specific optimizations for continuous tracking
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        
+        const watchOptions = {
+            enableHighAccuracy: true,
+            timeout: isIOS ? 8000 : 10000, // Shorter timeout for iOS
+            maximumAge: isIOS ? 15000 : 30000, // Shorter cache for iOS - more frequent updates
+        };
+
         const watchId = navigator.geolocation.watchPosition(
             (pos) => {
                 console.log('Location updated:', pos);
@@ -277,13 +337,28 @@ export default function Map({ onMapClick, currentUser }) {
             },
             (error) => {
                 console.log('Location tracking error:', error);
+                
+                // For iOS, log specific error types but don't show user errors for watch failures
+                if (isIOS) {
+                    switch (error.code) {
+                        case 1:
+                            console.log('iOS: Location permission denied during tracking');
+                            break;
+                        case 2:
+                            console.log('iOS: Location unavailable during tracking');
+                            break;
+                        case 3:
+                            console.log('iOS: Location request timed out during tracking');
+                            break;
+                        default:
+                            console.log('iOS: Unknown location tracking error');
+                    }
+                }
+                
                 // Don't set error for watch position failures, just log them
+                // This prevents showing error messages for temporary GPS issues
             },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 30000, // Accept cached position up to 30 seconds old
-            }
+            watchOptions
         );
 
         setLocationWatchId(watchId);
@@ -358,7 +433,19 @@ export default function Map({ onMapClick, currentUser }) {
     // get user location automatically on mount
     useEffect(() => {
         checkLocationPermission();
-        getUserLocation();
+        
+        // Get optimal location strategy for current device
+        const strategy = getLocationStrategy();
+        
+        if (strategy.canAutoRequest) {
+            // For non-iOS devices or PWA mode, try to get location automatically
+            getUserLocation();
+        } else {
+            // For iOS Safari (non-PWA), just set a fallback position and wait for user interaction
+            setPosition(fallbackPosition);
+            setLocationMethod('fallback');
+            setLoading(false);
+        }
     }, []);
 
     // Start continuous location tracking after initial location is obtained
@@ -443,17 +530,54 @@ export default function Map({ onMapClick, currentUser }) {
                         zIndex: 10000,
                         width: '90%',
                         maxWidth: 600,
+                        backgroundColor: 'rgba(13, 27, 42, 0.95)',
+                        color: 'white',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        backdropFilter: 'blur(10px)',
+                        '& .MuiAlert-icon': {
+                            color: 'rgba(255, 255, 255, 0.8)'
+                        }
                     }}
                 >
-                    <strong>iPhone Location Tips:</strong>
-                    <br />
-                    • Make sure Location Services are enabled in Settings → Privacy → Location Services
-                    <br />
-                    • Allow location access when prompted by Safari
-                    <br />
-                    • Try refreshing the page if location doesn't work initially
-                    <br />
-                    • Ensure you're using Safari (not Chrome/Firefox) for best compatibility
+                    <Box sx={{ fontWeight: 600, mb: 1 }}>
+                        📍 Enable Location Access on iPhone
+                    </Box>
+                    <Box sx={{ fontSize: '0.875rem', lineHeight: 1.5, opacity: 0.9 }}>
+                        {isPWA() ? (
+                            <>
+                                <Box sx={{ mb: 1 }}>
+                                    <strong>PWA Mode Detected:</strong> You're using the app in standalone mode
+                                </Box>
+                                <Box sx={{ mb: 1 }}>
+                                    <strong>Step 1:</strong> Go to Settings → Privacy → Location Services
+                                </Box>
+                                <Box sx={{ mb: 1 }}>
+                                    <strong>Step 2:</strong> Find this app and set it to "While Using App"
+                                </Box>
+                                <Box sx={{ mb: 1 }}>
+                                    <strong>Step 3:</strong> Return here and tap the location button below
+                                </Box>
+                            </>
+                        ) : (
+                            <>
+                                <Box sx={{ mb: 1 }}>
+                                    <strong>Step 1:</strong> Go to Settings → Privacy → Location Services
+                                </Box>
+                                <Box sx={{ mb: 1 }}>
+                                    <strong>Step 2:</strong> Find "Safari" and set it to "While Using App"
+                                </Box>
+                                <Box sx={{ mb: 1 }}>
+                                    <strong>Step 3:</strong> Return here and tap the location button below
+                                </Box>
+                                <Box sx={{ fontSize: '0.8rem', opacity: 0.7, mt: 1 }}>
+                                    💡 Tip: For better location access, add this app to your home screen
+                                </Box>
+                            </>
+                        )}
+                        <Box sx={{ fontSize: '0.8rem', opacity: 0.7, mt: 1 }}>
+                            💡 Tip: Make sure you're using Safari (not Chrome/Firefox) for best compatibility
+                        </Box>
+                    </Box>
                 </Alert>
             )}
 
@@ -527,6 +651,8 @@ export default function Map({ onMapClick, currentUser }) {
                     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
                     backdropFilter: 'blur(10px)',
+                    width: 56,
+                    height: 56,
                     '&:hover': {
                         background: 'linear-gradient(135deg, rgba(13, 27, 42, 1) 0%, rgba(25, 45, 65, 1) 100%)',
                         boxShadow: '0 6px 16px rgba(0, 0, 0, 0.4)',
@@ -535,6 +661,15 @@ export default function Map({ onMapClick, currentUser }) {
                     '&:active': {
                         transform: 'translateY(0px)',
                     },
+                    // iOS-specific styling
+                    ...(/iPad|iPhone|iPod/.test(navigator.userAgent) && {
+                        width: 64,
+                        height: 64,
+                        fontSize: '1.2rem',
+                        '& .MuiSvgIcon-root': {
+                            fontSize: '1.5rem'
+                        }
+                    })
                 }}
             >
                 <MyLocationIcon />
