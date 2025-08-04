@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, CircularProgress, Alert, Fab, Paper, Typography, IconButton, Tooltip, Card, CardContent, Chip, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Grid, List, ListItem, ListItemIcon, ListItemText, Divider } from '@mui/material';
+import { Box, CircularProgress, Alert, Fab, Paper, Typography, IconButton, Tooltip, Card, CardContent, Chip } from '@mui/material';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
@@ -15,10 +15,6 @@ import SatelliteIcon from '@mui/icons-material/Satellite';
 import LayersIcon from '@mui/icons-material/Layers';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckIcon from '@mui/icons-material/Check';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
-import PublicIcon from '@mui/icons-material/Public';
-import EditLocationIcon from '@mui/icons-material/EditLocation';
-import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 
 
 // Component to handle map clicks
@@ -66,11 +62,8 @@ export default function Map({ onMapClick, currentUser }) {
     const [layersPanelOpen, setLayersPanelOpen] = useState(false);
 
     // Enhanced location tracking state
-    const [locationMethod, setLocationMethod] = useState(null); // 'gps', 'ip', 'manual'
+    const [locationMethod, setLocationMethod] = useState(null); // 'gps', 'ip'
     const [locationPermission, setLocationPermission] = useState('unknown'); // 'granted', 'denied', 'unknown'
-    const [showLocationOptions, setShowLocationOptions] = useState(false);
-    const [manualLocationInput, setManualLocationInput] = useState({ lat: '', lng: '' });
-    const [showManualInput, setShowManualInput] = useState(false);
     const [shouldRecenterMap, setShouldRecenterMap] = useState(true); // Only recenter on initial load or manual request
 
     // Layer options configuration
@@ -227,24 +220,15 @@ export default function Map({ onMapClick, currentUser }) {
                 }
             }
             
-            // If all IP services fail, show manual location options
-            setShowLocationOptions(true);
+            // If all IP services fail, show error
+            setError('Unable to determine your location. Please try again or check your internet connection.');
             setLoading(false);
             
         } catch (error) {
             console.error('IP-based location failed:', error);
-            setShowLocationOptions(true);
+            setError('Unable to determine your location. Please try again.');
             setLoading(false);
         }
-    };
-
-    // Manual location input
-    const applyManualLocation = (lat, lng) => {
-        setPosition({ lat, lng });
-        setLocationMethod('manual');
-        setShowLocationOptions(false);
-        setError(null);
-        setShouldRecenterMap(true); // Recenter when user manually sets location
     };
 
     // Check location permission status
@@ -832,257 +816,6 @@ export default function Map({ onMapClick, currentUser }) {
                     onClose={handleDrawerClose}
                 />
             )}
-
-            {/* Location Options Modal */}
-            <Dialog
-                open={showLocationOptions}
-                onClose={() => setShowLocationOptions(false)}
-                maxWidth="sm"
-                fullWidth
-                PaperProps={{
-                    sx: {
-                        background: 'linear-gradient(135deg, rgba(13, 27, 42, 0.98) 0%, rgba(25, 45, 65, 0.95) 100%)',
-                        backdropFilter: 'blur(20px)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: 3,
-                    }
-                }}
-            >
-                <DialogTitle sx={{ color: 'white', pb: 1 }}>
-                    <Typography variant="h6" fontWeight="700">
-                        Location Access
-                    </Typography>
-                    <Typography variant="body2" color="rgba(255, 255, 255, 0.7)" sx={{ mt: 1 }}>
-                        Choose how to get your location
-                    </Typography>
-                </DialogTitle>
-                <DialogContent sx={{ pt: 2 }}>
-                    <List sx={{ p: 0 }}>
-                        <ListItem
-                            button
-                            onClick={() => {
-                                setShowLocationOptions(false);
-                                getUserLocation();
-                            }}
-                            sx={{
-                                borderRadius: 2,
-                                mb: 1,
-                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                border: '1px solid rgba(255, 255, 255, 0.2)',
-                                '&:hover': {
-                                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                                }
-                            }}
-                        >
-                            <ListItemIcon>
-                                <GpsFixedIcon sx={{ color: 'white' }} />
-                            </ListItemIcon>
-                            <ListItemText
-                                primary="Use GPS Location"
-                                secondary="Most accurate location using your device's GPS"
-                                sx={{
-                                    '& .MuiListItemText-primary': { color: 'white', fontWeight: 600 },
-                                    '& .MuiListItemText-secondary': { color: 'rgba(255, 255, 255, 0.7)' }
-                                }}
-                            />
-                        </ListItem>
-
-                        <ListItem
-                            button
-                            onClick={() => {
-                                setShowLocationOptions(false);
-                                getLocationByIP();
-                            }}
-                            sx={{
-                                borderRadius: 2,
-                                mb: 1,
-                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                border: '1px solid rgba(255, 255, 255, 0.2)',
-                                '&:hover': {
-                                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                                }
-                            }}
-                        >
-                            <ListItemIcon>
-                                <PublicIcon sx={{ color: 'white' }} />
-                            </ListItemIcon>
-                            <ListItemText
-                                primary="Use IP Location"
-                                secondary="Approximate location based on your internet connection"
-                                sx={{
-                                    '& .MuiListItemText-primary': { color: 'white', fontWeight: 600 },
-                                    '& .MuiListItemText-secondary': { color: 'rgba(255, 255, 255, 0.7)' }
-                                }}
-                            />
-                        </ListItem>
-
-                        <ListItem
-                            button
-                            onClick={() => {
-                                setShowLocationOptions(false);
-                                setShowManualInput(true);
-                            }}
-                            sx={{
-                                borderRadius: 2,
-                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                border: '1px solid rgba(255, 255, 255, 0.2)',
-                                '&:hover': {
-                                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                                }
-                            }}
-                        >
-                            <ListItemIcon>
-                                <EditLocationIcon sx={{ color: 'white' }} />
-                            </ListItemIcon>
-                            <ListItemText
-                                primary="Enter Location Manually"
-                                secondary="Type in your city or coordinates"
-                                sx={{
-                                    '& .MuiListItemText-primary': { color: 'white', fontWeight: 600 },
-                                    '& .MuiListItemText-secondary': { color: 'rgba(255, 255, 255, 0.7)' }
-                                }}
-                            />
-                        </ListItem>
-                    </List>
-                </DialogContent>
-                <DialogActions sx={{ p: 3, pt: 1 }}>
-                    <Button
-                        onClick={() => setShowLocationOptions(false)}
-                        sx={{
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            '&:hover': { color: 'white' }
-                        }}
-                    >
-                        Cancel
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            {/* Manual Location Input Dialog */}
-            <Dialog
-                open={showManualInput}
-                onClose={() => setShowManualInput(false)}
-                maxWidth="sm"
-                fullWidth
-                PaperProps={{
-                    sx: {
-                        background: 'linear-gradient(135deg, rgba(13, 27, 42, 0.98) 0%, rgba(25, 45, 65, 0.95) 100%)',
-                        backdropFilter: 'blur(20px)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: 3,
-                    }
-                }}
-            >
-                <DialogTitle sx={{ color: 'white' }}>
-                    <Typography variant="h6" fontWeight="700">
-                        Enter Location
-                    </Typography>
-                </DialogTitle>
-                <DialogContent>
-                    <Grid container spacing={2} sx={{ mt: 1 }}>
-                        <Grid item xs={6}>
-                            <TextField
-                                fullWidth
-                                label="Latitude"
-                                type="number"
-                                value={manualLocationInput.lat}
-                                onChange={(e) => setManualLocationInput(prev => ({ ...prev, lat: e.target.value }))}
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        color: 'white',
-                                        '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.3)' },
-                                        '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.5)' },
-                                        '&.Mui-focused fieldset': { borderColor: 'rgba(99, 179, 237, 0.8)' }
-                                    },
-                                    '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.7)' },
-                                    '& .MuiInputLabel-root.Mui-focused': { color: 'rgba(99, 179, 237, 0.8)' }
-                                }}
-                            />
-                        </Grid>
-                        <Grid item xs={6}>
-                            <TextField
-                                fullWidth
-                                label="Longitude"
-                                type="number"
-                                value={manualLocationInput.lng}
-                                onChange={(e) => setManualLocationInput(prev => ({ ...prev, lng: e.target.value }))}
-                                sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                        color: 'white',
-                                        '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.3)' },
-                                        '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.5)' },
-                                        '&.Mui-focused fieldset': { borderColor: 'rgba(99, 179, 237, 0.8)' }
-                                    },
-                                    '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.7)' },
-                                    '& .MuiInputLabel-root.Mui-focused': { color: 'rgba(99, 179, 237, 0.8)' }
-                                }}
-                            />
-                        </Grid>
-                    </Grid>
-                    
-                    <Box sx={{ mt: 3 }}>
-                        <Typography variant="body2" color="rgba(255, 255, 255, 0.7)" sx={{ mb: 2 }}>
-                            Quick locations:
-                        </Typography>
-                        <Grid container spacing={1}>
-                            {[
-                                { name: 'Limassol, Cyprus', lat: 34.7071, lng: 33.0226 },
-                                { name: 'Nicosia, Cyprus', lat: 35.1856, lng: 33.3823 },
-                                { name: 'Larnaca, Cyprus', lat: 34.9229, lng: 33.6233 },
-                            ].map((location) => (
-                                <Grid item xs={12} sm={4} key={location.name}>
-                                    <Button
-                                        variant="outlined"
-                                        size="small"
-                                        onClick={() => {
-                                            setManualLocationInput({ lat: location.lat, lng: location.lng });
-                                        }}
-                                        sx={{
-                                            color: 'rgba(255, 255, 255, 0.8)',
-                                            borderColor: 'rgba(255, 255, 255, 0.3)',
-                                            '&:hover': {
-                                                borderColor: 'rgba(255, 255, 255, 0.5)',
-                                                color: 'white'
-                                            }
-                                        }}
-                                    >
-                                        {location.name}
-                                    </Button>
-                                </Grid>
-                            ))}
-                        </Grid>
-                    </Box>
-                </DialogContent>
-                <DialogActions sx={{ p: 3 }}>
-                    <Button
-                        onClick={() => setShowManualInput(false)}
-                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={() => {
-                            if (manualLocationInput.lat && manualLocationInput.lng) {
-                                applyManualLocation(
-                                    parseFloat(manualLocationInput.lat),
-                                    parseFloat(manualLocationInput.lng)
-                                );
-                                setShowManualInput(false);
-                            }
-                        }}
-                        variant="contained"
-                        disabled={!manualLocationInput.lat || !manualLocationInput.lng}
-                        sx={{
-                            background: 'linear-gradient(135deg, rgba(99, 179, 237, 0.8) 0%, rgba(99, 179, 237, 0.6) 100%)',
-                            '&:hover': {
-                                background: 'linear-gradient(135deg, rgba(99, 179, 237, 0.9) 0%, rgba(99, 179, 237, 0.7) 100%)',
-                            }
-                        }}
-                    >
-                        Set Location
-                    </Button>
-                </DialogActions>
-            </Dialog>
         </Box>
     );
 }
