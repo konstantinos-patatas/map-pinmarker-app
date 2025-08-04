@@ -83,7 +83,7 @@ export default function Map({ onMapClick, currentUser }) {
     // fallback position - Limassol, Cyprus
     const fallbackPosition = { lat: 34.67503960521671, lng: 33.043841190472115 };
 
-    // Detect device capabilities on mount
+    // Detect device capabilities and attempt location on mount
     useEffect(() => {
         const device = getDeviceInfo();
         const strategy = getLocationStrategy();
@@ -91,17 +91,10 @@ export default function Map({ onMapClick, currentUser }) {
         setDeviceInfo(device);
         setLocationStrategy(strategy);
 
-        // Set initial position based on device capabilities
+        // Always try to get location first, regardless of device
         if (device.supportsGeolocation) {
-            // For iOS Safari, we'll show a prompt instead of auto-requesting
-            if (strategy.requiresUserInteraction) {
-                setShowLocationPrompt(true);
-                setPosition(fallbackPosition);
-                setLocationMethod('fallback');
-            } else {
-                // For other devices, try to get location automatically
-                handleLocationRequest();
-            }
+            // Try to get location automatically first
+            handleLocationRequest();
         } else {
             // Fallback for devices without geolocation support
             handleLocationRequest();
@@ -130,11 +123,20 @@ export default function Map({ onMapClick, currentUser }) {
         } catch (error) {
             console.log('Location request failed:', error);
             
-            // Show manual location prompt as fallback
-            setShowLocationPrompt(true);
-            setPosition(fallbackPosition);
-            setLocationMethod('fallback');
-            setError('Unable to get your location automatically. Please use the location button below.');
+            // Only show prompt if GPS and IP location both failed
+            // Check if it's a permission denied error specifically
+            if (error.message === 'Location permission denied' || 
+                error.message === 'Unable to determine location') {
+                setShowLocationPrompt(true);
+                setPosition(fallbackPosition);
+                setLocationMethod('fallback');
+                setError('Location access is needed. Please enable location services and try again.');
+            } else {
+                // For other errors (timeout, network issues), just set fallback without showing prompt
+                setPosition(fallbackPosition);
+                setLocationMethod('fallback');
+                setError('Unable to get your location. Please try again later.');
+            }
         } finally {
             setLoading(false);
         }
@@ -342,7 +344,7 @@ export default function Map({ onMapClick, currentUser }) {
                 </Alert>
             )}
 
-            {/* Universal location guidance */}
+            {/* Location Access Guidance */}
             {showLocationPrompt && (
                 <Alert
                     severity="info"
@@ -365,15 +367,15 @@ export default function Map({ onMapClick, currentUser }) {
                     }}
                 >
                     <Box sx={{ fontWeight: 600, mb: 1 }}>
-                        📍 Enable Location Access
+                        📍 Location Access Required
                     </Box>
                     <Box sx={{ fontSize: '0.875rem', lineHeight: 1.5, opacity: 0.9 }}>
+                        <Box sx={{ mb: 1 }}>
+                            We couldn't access your location. Please enable location services:
+                        </Box>
                         {deviceInfo.isIOS ? (
                             deviceInfo.isPWA ? (
                                 <>
-                                    <Box sx={{ mb: 1 }}>
-                                        <strong>PWA Mode:</strong> You're using the app in standalone mode
-                                    </Box>
                                     <Box sx={{ mb: 1 }}>
                                         <strong>Step 1:</strong> Go to Settings → Privacy → Location Services
                                     </Box>

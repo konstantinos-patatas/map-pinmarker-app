@@ -188,6 +188,11 @@ export const requestLocationWithFallback = async (options = {}) => {
     } catch (gpsError) {
         console.log('GPS location failed, trying IP-based location:', gpsError);
         
+        // If GPS failed due to permission denied, don't try IP
+        if (gpsError.message === 'Location permission denied') {
+            throw gpsError;
+        }
+        
         // Strategy 3: Try IP-based location
         try {
             const ipLocation = await getLocationByIP();
@@ -198,6 +203,7 @@ export const requestLocationWithFallback = async (options = {}) => {
             };
         } catch (ipError) {
             console.log('IP location failed:', ipError);
+            // If both GPS and IP failed, throw a generic error
             throw new Error('Unable to determine location');
         }
     }
