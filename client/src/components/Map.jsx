@@ -20,6 +20,8 @@ import {
     formatAccuracy,
     getLocationMethodDisplay
 } from '../utils/locationUtils.js';
+import LoadingScreen from "./LoadingScreen.jsx";
+import LocationPermissionPrompt from "./LocationPermissionPromt.jsx";
 
 // Component to handle map clicks
 function MapClickHandler({ onMapClick }) {
@@ -33,15 +35,16 @@ function MapClickHandler({ onMapClick }) {
 }
 
 //helper react function to programmatically change location when user navigates elsewhere
-function RecenterMap({ lat, lng, shouldRecenter }) {
+function RecenterMap({ lat, lng, shouldRecenter, zoom }) {
     const map = useMapEvents({});
     React.useEffect(() => {
         if (lat && lng && shouldRecenter) {
-            map.setView([lat, lng], 22, { animate: true });
+            map.setView([lat, lng], zoom, { animate: true });
         }
-    }, [lat, lng, shouldRecenter, map]);
+    }, [lat, lng, shouldRecenter, zoom, map]);
     return null;
 }
+
 
 // Component to track map center coordinates
 function MapCenterTracker({ onCenterChange }) {
@@ -89,9 +92,12 @@ export default function Map({ onMapClick, currentUser }) {
     // Map center tracking for AddPinButton
     const [mapCenter, setMapCenter] = useState(null);
     const addPinButtonRef = React.useRef();
+    const fallbackZoom = 8;
+    const defaultZoom = 22;
+    const currentZoom = locationMethod === 'fallback' ? fallbackZoom : defaultZoom;
 
-    // fallback position - Limassol, Cyprus
-    const fallbackPosition = { lat: 34.67503960521671, lng: 33.043841190472115 };
+    // fallback position -Cyprus middle from paphos to paralimni
+    const fallbackPosition = { lat: 34.749604, lng: 33.303213};
 
     // Detect device capabilities and attempt location on mount
     useEffect(() => {
@@ -300,25 +306,10 @@ export default function Map({ onMapClick, currentUser }) {
         return () => unsubscribe();
     }, [currentUser?.uid]);
 
+    // what to return if something is loading 
     if (loading || pinsLoading) {
         return (
-            <Box
-                sx={{
-                    height: '100vh',
-                    width: '100vw',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    flexDirection: 'column',
-                    gap: 2,
-                }}
-            >
-                <CircularProgress />
-                <div style={{ textAlign: 'center', color: '#666' }}>
-                    {loading && 'Getting your location...'}
-                    {pinsLoading && 'Loading pins...'}
-                </div>
-            </Box>
+            <LoadingScreen loading = {loading} pinsLoading ={pinsLoading} />
         );
     }
 
@@ -352,102 +343,23 @@ export default function Map({ onMapClick, currentUser }) {
 
             {/* Location Access Guidance */}
             {showLocationPrompt && (
-                <Alert
-                    severity="info"
+                <LocationPermissionPrompt
+                    open={showLocationPrompt}
                     onClose={() => setShowLocationPrompt(false)}
-                    sx={{
-                        position: 'absolute',
-                        top: 16,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        zIndex: 10000,
-                        width: '90%',
-                        maxWidth: 600,
-                        backgroundColor: 'rgba(13, 27, 42, 0.95)',
-                        color: 'white',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        backdropFilter: 'blur(10px)',
-                        '& .MuiAlert-icon': {
-                            color: 'rgba(255, 255, 255, 0.8)'
-                        }
-                    }}
-                >
-                    <Box sx={{ fontWeight: 600, mb: 1 }}>
-                        📍 Location Access Required
-                    </Box>
-                    <Box sx={{ fontSize: '0.875rem', lineHeight: 1.5, opacity: 0.9 }}>
-                        <Box sx={{ mb: 1 }}>
-                            We couldn't access your location. Please enable location services:
-                        </Box>
-                        {deviceInfo.isIOS ? (
-                            deviceInfo.isPWA ? (
-                                <>
-                                    <Box sx={{ mb: 1 }}>
-                                        <strong>Step 1:</strong> Go to Settings → Privacy → Location Services
-                                    </Box>
-                                    <Box sx={{ mb: 1 }}>
-                                        <strong>Step 2:</strong> Find this app and set it to "While Using App"
-                                    </Box>
-                                    <Box sx={{ mb: 1 }}>
-                                        <strong>Step 3:</strong> Return here and tap the location button below
-                                    </Box>
-                                </>
-                            ) : (
-                                <>
-                                    <Box sx={{ mb: 1 }}>
-                                        <strong>Step 1:</strong> Go to Settings → Privacy → Location Services
-                                    </Box>
-                                    <Box sx={{ mb: 1 }}>
-                                        <strong>Step 2:</strong> Find "Safari" and set it to "While Using App"
-                                    </Box>
-                                    <Box sx={{ mb: 1 }}>
-                                        <strong>Step 3:</strong> Return here and tap the location button below
-                                    </Box>
-                                    <Box sx={{ fontSize: '0.8rem', opacity: 0.7, mt: 1 }}>
-                                        💡 Tip: For better location access, add this app to your home screen
-                                    </Box>
-                                </>
-                            )
-                        ) : deviceInfo.isAndroid ? (
-                            <>
-                                <Box sx={{ mb: 1 }}>
-                                    <strong>Step 1:</strong> Tap "Allow" when prompted for location access
-                                </Box>
-                                <Box sx={{ mb: 1 }}>
-                                    <strong>Step 2:</strong> If not prompted, go to Settings → Apps → Browser → Permissions → Location
-                                </Box>
-                                <Box sx={{ mb: 1 }}>
-                                    <strong>Step 3:</strong> Set to "Allow while using app"
-                                </Box>
-                            </>
-                        ) : (
-                            <>
-                                <Box sx={{ mb: 1 }}>
-                                    <strong>Step 1:</strong> Tap "Allow" when your browser asks for location access
-                                </Box>
-                                <Box sx={{ mb: 1 }}>
-                                    <strong>Step 2:</strong> If not prompted, check your browser's location settings
-                                </Box>
-                                <Box sx={{ mb: 1 }}>
-                                    <strong>Step 3:</strong> Tap the location button below to try again
-                                </Box>
-                            </>
-                        )}
-                        <Box sx={{ fontSize: '0.8rem', opacity: 0.7, mt: 1 }}>
-                            💡 Tip: For best experience, use Chrome, Safari, or Firefox
-                        </Box>
-                    </Box>
-                </Alert>
+                    onRetry={handleManualLocationRequest}
+                    deviceInfo={deviceInfo}
+                />
             )}
 
             <MapContainer
                 center={[position?.lat || fallbackPosition.lat, position?.lng || fallbackPosition.lng]}
-                zoom={22}
+                zoom={currentZoom}
                 style={{ height: '100%', width: '100%' }}
                 scrollWheelZoom={true}
                 attributionControl={false}
             >
-                {/* Custom layers control - Street View */}
+
+            {/* Custom layers control - Street View */}
                 {currentLayer === 'street' && (
                     <TileLayer
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -464,7 +376,7 @@ export default function Map({ onMapClick, currentUser }) {
                 )}
 
                 {/* User location marker */}
-                {position && <Marker position={[position.lat, position.lng]} icon={UserLocationIcon} />}
+                {(position && locationMethod !=='fallback')  && <Marker position={[position.lat, position.lng]} icon={UserLocationIcon} />}
 
                 {/* User-added pins - now with click handlers instead of popups */}
                 {pins.map((pin) => (
@@ -489,8 +401,10 @@ export default function Map({ onMapClick, currentUser }) {
                     lat={position?.lat || fallbackPosition.lat}
                     lng={position?.lng || fallbackPosition.lng}
                     shouldRecenter={shouldRecenterMap}
+                    zoom={currentZoom}
                 />
-                
+
+
                 <MapCenterTracker onCenterChange={handleMapCenterChange} />
             </MapContainer>
 

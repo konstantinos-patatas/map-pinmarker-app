@@ -237,15 +237,23 @@ export default function PinPopUp({ pin, open, onClose }) {
     //preload vote of the user
     useEffect(() => {
         const fetchUserVote = async () => {
-            if (!currentUser || !pin?.id) return;
+            if (!currentUser || !pin?.id) {
+                setVerification(null); // Reset if no user or pin
+                return;
+            }
+
             const voteRef = doc(db, `pins/${pin.id}/votes/${currentUser.uid}`);
             const snap = await getDoc(voteRef);
             if (snap.exists()) {
                 setVerification(snap.data().vote);
+            } else {
+                setVerification(null); // ✅ Reset if user hasn't voted on this pin
             }
         };
+
         fetchUserVote();
     }, [currentUser, pin?.id]);
+
 
 
     // Reset state when drawer opens/closes
