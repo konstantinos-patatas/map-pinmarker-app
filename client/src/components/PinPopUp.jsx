@@ -38,6 +38,7 @@ import {
 } from '@mui/icons-material';
 import {db} from "../services/firebase.js";
 import AuthModal from "./AuthModal.jsx";
+import EmailForm from "./EmailForm.jsx";
 
 export default function PinPopUp({ pin, open, onClose }) {
     const {userProfile,currentUser} = useAuth();
@@ -55,6 +56,11 @@ export default function PinPopUp({ pin, open, onClose }) {
 
     const COLLAPSED_HEIGHT = 200;
     const EXPANDED_HEIGHT = window.innerHeight * 0.85;
+
+    const [modalOpen, setModalOpen] = useState(false);
+
+    const handleOpenModal = () => setModalOpen(true);
+    const handleCloseModal = () => setModalOpen(false)
 
     const handleFavoriteToggle = async () => {
         if (!currentUser) {
@@ -782,9 +788,13 @@ export default function PinPopUp({ pin, open, onClose }) {
                                 backgroundColor: 'rgba(255, 152, 0, 0.1)',
                             }
                         }}
+
+                        onClick={handleOpenModal}
                     >
                         Report Issue
                     </Button>
+                    {/* Modal for EmailJS report */}
+                    <EmailForm open={modalOpen} onClose={handleCloseModal} />
                 </Stack>
 
                 <Snackbar
