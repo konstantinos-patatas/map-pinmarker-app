@@ -53,6 +53,8 @@ export default function PinPopUp({ pin, open, onClose }) {
     const [authModalOpen, setAuthModalOpen] = useState(false);
     const [errorMessage, setErrorMessage] = useState(''); //set error if ocurs
     const [openError, setOpenError] = useState(false); //open the error alert
+    const [freeVotes, setFreeVotes] = useState(pin.isFreeCount);
+    const [notFreeVotes,setNotFreeVotes] = useState(pin.isNotFreeCount)
 
     const COLLAPSED_HEIGHT = 200;
     const EXPANDED_HEIGHT = window.innerHeight * 0.85;
@@ -107,39 +109,63 @@ export default function PinPopUp({ pin, open, onClose }) {
                 if (previousVote === type) {
                     // ✅ User clicked the same vote again -> remove it
                     const updates = {};
-                    if (type === "confirmed") updates.isFreeCount = increment(-1);
-                    if (type === "denied") updates.isNotFreeCount = increment(-1);
+                    if (type === "confirmed") {
+                        updates.isFreeCount = increment(-1);
+                    }
+                    if (type === "denied") {
+                        updates.isNotFreeCount = increment(-1);
+                    }
 
                     await updateDoc(pinRef, updates);
                     await deleteDoc(voteRef);
 
                     setVerification(null); // Clear UI vote
+                    await fetchVoteCount(); // Refresh the counts
                     return;
                 } else {
                     // ✅ Switching vote (from one type to the other)
+                    // This is the problematic part - we need to do this correctly
                     const updates = {};
-                    if (previousVote === "confirmed") updates.isFreeCount = increment(-1);
-                    if (previousVote === "denied") updates.isNotFreeCount = increment(-1);
-                    if (type === "confirmed") updates.isFreeCount = (updates.isFreeCount || 0) + increment(1);
-                    if (type === "denied") updates.isNotFreeCount = (updates.isNotFreeCount || 0) + increment(1);
+
+                    // Decrement the previous vote
+                    if (previousVote === "confirmed") {
+                        updates.isFreeCount = increment(-1);
+                    }
+                    if (previousVote === "denied") {
+                        updates.isNotFreeCount = increment(-1);
+                    }
+
+                    // Increment the new vote
+                    if (type === "confirmed") {
+                        updates.isFreeCount = increment(1);
+                    }
+                    if (type === "denied") {
+                        updates.isNotFreeCount = increment(1);
+                    }
 
                     await updateDoc(pinRef, updates);
                     await setDoc(voteRef, { vote: type, votedAt: new Date().toISOString() });
 
                     setVerification(type);
+                    await fetchVoteCount();
                     return;
                 }
             }
 
             // ✅ First-time vote
             const updates = {};
-            if (type === "confirmed") updates.isFreeCount = increment(1);
-            if (type === "denied") updates.isNotFreeCount = increment(1);
+            if (type === "confirmed") {
+                updates.isFreeCount = increment(1);
+            }
+            if (type === "denied") {
+                updates.isNotFreeCount = increment(1);
+            }
 
             await updateDoc(pinRef, updates);
             await setDoc(voteRef, { vote: type, votedAt: new Date().toISOString() });
 
             setVerification(type);
+            await fetchVoteCount();
         } catch (err) {
             console.error("Verification failed", err);
             setErrorMessage('Something went wrong while adding your option. Please try again.');
@@ -259,6 +285,26 @@ export default function PinPopUp({ pin, open, onClose }) {
 
         fetchUserVote();
     }, [currentUser, pin?.id]);
+
+    //get the vote counts on mount for fast refresh
+    const fetchVoteCount = async () => {
+        if(!pin?.id) return;
+
+        try {
+            const pinRef = doc(db, `pins/${pin.id}`);
+            const snap = await getDoc(pinRef);
+            if (snap.exists()) {
+                const pinData = snap.data();
+                setFreeVotes(pinData.isFreeCount);
+                setNotFreeVotes(pinData.isNotFreeCount);
+            }
+        } catch (error) {
+            console.error("Error fetching pin:", error);
+        }
+    }
+    useEffect(() => {
+        fetchVoteCount()
+    }, [pin?.id]);
 
 
 
@@ -545,12 +591,10 @@ export default function PinPopUp({ pin, open, onClose }) {
                     </Grow>
                 )}
 
-                {/* Simple Bar Chart Feedback showing how likely is actually free or not */}
+                {/* feedback on showing how many pressed yes and no */}
                 <Box >
                     {(() => {
-                        const totalVotes = (pin.isFreeCount || 0) + (pin.isNotFreeCount || 0);
-                        const freeVotes = pin.isFreeCount || 0;
-                        const paidVotes = pin.isNotFreeCount || 0;
+                        const totalVotes = (freeVotes || 0) + (notFreeVotes || 0);
                         const freePercentage = totalVotes > 0 ? (freeVotes / totalVotes) * 100 : 0;
 
                         // Determine trust level and message
@@ -579,7 +623,7 @@ export default function PinPopUp({ pin, open, onClose }) {
                                 return {
                                     icon: '⚠️',
                                     title: 'Might be free parking',
-                                    subtitle: `${freeVotes} people said is free, ${paidVotes} people said is paid - check current conditions`,
+                                    subtitle: `${freeVotes} people said is free, ${notFreeVotes} people said is paid - check current conditions`,
                                     color: '#FF9800',
                                     bgColor: 'rgba(255, 152, 0, 0.1)',
                                     borderColor: 'rgba(255, 152, 0, 0.3)'
@@ -588,7 +632,7 @@ export default function PinPopUp({ pin, open, onClose }) {
                                 return {
                                     icon: '❌',
                                     title: 'Likely Paid',
-                                    subtitle: `${paidVotes} of ${totalVotes} people say it's not free`,
+                                    subtitle: `${notFreeVotes} of ${totalVotes} people say it's not free`,
                                     color: '#F44336',
                                     bgColor: 'rgba(244, 67, 54, 0.15)',
                                     borderColor: 'rgba(244, 67, 54, 0.3)'

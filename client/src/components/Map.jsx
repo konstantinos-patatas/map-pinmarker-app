@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Box, CircularProgress, Alert, Fab } from '@mui/material';
+import { Box, Alert } from '@mui/material';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import 'leaflet-rotate';
 import 'leaflet/dist/leaflet.css';
-import MyLocationIcon from '@mui/icons-material/MyLocation';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import UserIcon from "./controlButtons/UserIcon.jsx";
@@ -15,10 +15,7 @@ import LocationButton from "./controlButtons/LocationButton.jsx";
 import AddPinButton from "./controlButtons/AddPinButton.jsx";
 import { 
     getDeviceInfo, 
-    requestLocationWithFallback, 
-    getLocationStrategy,
-    formatAccuracy,
-    getLocationMethodDisplay
+    requestLocationWithFallback,
 } from '../utils/locationUtils.js';
 import LoadingScreen from "./LoadingScreen.jsx";
 import LocationPermissionPrompt from "./LocationPermissionPromt.jsx";
@@ -73,24 +70,19 @@ export default function Map({ onMapClick, currentUser }) {
 
     // New state for continuous location tracking
     const [locationWatchId, setLocationWatchId] = useState(null);
-    const [locationAccuracy, setLocationAccuracy] = useState(null);
 
     // Custom layers control state
     const [currentLayer, setCurrentLayer] = useState('street');
 
     // Enhanced location tracking state
     const [locationMethod, setLocationMethod] = useState(null); // 'gps', 'ip', 'manual'
-    const [locationPermission, setLocationPermission] = useState('unknown'); // 'granted', 'denied', 'unknown'
     const [shouldRecenterMap, setShouldRecenterMap] = useState(true); // Only recenter on initial load or manual request
     const [showLocationPrompt, setShowLocationPrompt] = useState(false);
-    const [locationAttempts, setLocationAttempts] = useState(0);
 
     // Device detection
     const [deviceInfo, setDeviceInfo] = useState(getDeviceInfo());
-    const [locationStrategy, setLocationStrategy] = useState(getLocationStrategy());
     
     // Map center tracking for AddPinButton
-    const [mapCenter, setMapCenter] = useState(null);
     const addPinButtonRef = React.useRef();
     const fallbackZoom = 8;
     const defaultZoom = 22;
@@ -102,10 +94,8 @@ export default function Map({ onMapClick, currentUser }) {
     // Detect device capabilities and attempt location on mount
     useEffect(() => {
         const device = getDeviceInfo();
-        const strategy = getLocationStrategy();
         
         setDeviceInfo(device);
-        setLocationStrategy(strategy);
 
         // Always try to get location first, regardless of device
         if (device.supportsGeolocation) {
@@ -121,7 +111,6 @@ export default function Map({ onMapClick, currentUser }) {
     const handleLocationRequest = useCallback(async () => {
         setLoading(true);
         setError(null);
-        setLocationAttempts(prev => prev + 1);
 
         try {
             const locationData = await requestLocationWithFallback();
@@ -131,8 +120,6 @@ export default function Map({ onMapClick, currentUser }) {
                 lng: locationData.lng,
             });
             setLocationMethod(locationData.method);
-            setLocationAccuracy(locationData.accuracy);
-            setLocationPermission('granted');
             setError(null);
             setShowLocationPrompt(false);
 
@@ -174,7 +161,6 @@ export default function Map({ onMapClick, currentUser }) {
                     lat: pos.coords.latitude,
                     lng: pos.coords.longitude,
                 });
-                setLocationAccuracy(pos.coords.accuracy);
                 setError(null);
                 setShouldRecenterMap(false);
             },
@@ -218,7 +204,6 @@ export default function Map({ onMapClick, currentUser }) {
 
     // Handle map center change
     const handleMapCenterChange = (lat, lng) => {
-        setMapCenter({ lat, lng });
         // Update AddPinButton coordinates if it's in add mode
         if (addPinButtonRef.current?.updatePinCoordinates) {
             addPinButtonRef.current.updatePinCoordinates(lat, lng);
@@ -357,6 +342,11 @@ export default function Map({ onMapClick, currentUser }) {
                 style={{ height: '100%', width: '100%' }}
                 scrollWheelZoom={true}
                 attributionControl={false}
+                // Add these rotation options:
+                rotate={true}
+                touchRotate={true}
+                rotateControl={true}
+                bearing={0} // Initial rotation angle (optional)
             >
 
             {/* Custom layers control - Street View */}
