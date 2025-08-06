@@ -5,7 +5,8 @@ import {
     createUserWithEmailAndPassword,
     signInWithPopup,
     signOut,
-    deleteUser
+    deleteUser,
+    sendPasswordResetEmail
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../services/firebase';
@@ -105,6 +106,44 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // Password Reset
+    const resetPassword = async (email) => {
+        try {
+            await sendPasswordResetEmail(auth, email);
+            return {
+                success: true,
+                message: 'Password reset email sent successfully. Please check your inbox.'
+            };
+        } catch (error) {
+            console.error('Error sending password reset email:', error);
+
+            // Handle specific error cases
+            let errorMessage = 'Failed to send password reset email.';
+
+            switch (error.code) {
+                case 'auth/user-not-found':
+                    errorMessage = 'No account found with this email address.';
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = 'Invalid email address.';
+                    break;
+                case 'auth/too-many-requests':
+                    errorMessage = 'Too many requests. Please try again later.';
+                    break;
+                case 'auth/network-request-failed':
+                    errorMessage = 'Network error. Please check your connection.';
+                    break;
+                default:
+                    errorMessage = error.message;
+            }
+
+            return {
+                success: false,
+                error: errorMessage
+            };
+        }
+    };
+
     // Delete Account
     const deleteAccount = async () => {
         try {
@@ -142,6 +181,7 @@ export const AuthProvider = ({ children }) => {
         login,
         signup,
         signInWithGoogle,
+        resetPassword,
         deleteAccount,
         logout,
         authLoading
