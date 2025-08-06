@@ -1,6 +1,7 @@
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+// services/firebase.js
+import { initializeApp } from 'firebase/app';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
     apiKey: "AIzaSyDM-OT3Zy9UbJivMMGW74OgBsHy90oTC98",
@@ -15,6 +16,20 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Export Auth & Firestore instances
+// Initialize Firebase Authentication and get a reference to the service
 export const auth = getAuth(app);
+
+// Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
+
+// Initialize Auth Providers
+export const googleProvider = new GoogleAuthProvider();
+// export const facebookProvider = new FacebookAuthProvider();
+// export const appleProvider = new OAuthProvider('apple.com');
+
+// Configure providers if needed
+googleProvider.addScope('profile');
+googleProvider.addScope('email');
+
+// facebookProvider.addScope('email');
+// facebookProvider.addScope('public_profile');

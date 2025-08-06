@@ -74,6 +74,7 @@ export default function UserIcon() {
                     }}
                 >
                     <Avatar
+                        src={user?.photoURL || undefined}
                         sx={{
                             width: 50,
                             height: 50,
@@ -85,7 +86,7 @@ export default function UserIcon() {
                             boxShadow: '0 0 15px rgba(0, 191, 255, 0.4)',
                         }}
                     >
-                        {user ? getUserInitials(user.fullName, user.email) : <PersonIcon />}
+                        {user?.photoURL ? '' : user ? getUserInitials(user.fullName, user.email) : <PersonIcon />}
                     </Avatar>
                 </IconButton>
             </Tooltip>
@@ -124,6 +125,7 @@ export default function UserIcon() {
                     <>
                         <Box sx={{ padding: '16px 20px', textAlign: 'center' }}>
                             <Avatar
+                                src={user?.photoURL || undefined}
                                 sx={{
                                     width: 60,
                                     height: 60,
@@ -136,7 +138,7 @@ export default function UserIcon() {
                                     boxShadow: '0 0 20px rgba(0, 191, 255, 0.4)',
                                 }}
                             >
-                                {getUserInitials(user.fullName, user.email)}
+                                {user?.photoURL ? '' : getUserInitials(user.fullName, user.email)}
                             </Avatar>
                             <Typography
                                 variant="h6"

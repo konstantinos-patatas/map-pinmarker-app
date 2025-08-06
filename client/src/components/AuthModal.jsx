@@ -20,9 +20,10 @@ import {
     Email as EmailIcon,
     Lock as LockIcon,
     Login as LoginIcon,
-    PersonAdd as PersonAddIcon
+    PersonAdd as PersonAddIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext.jsx';
+import SocialLoginButtons from "./controlButtons/SocialButtons.jsx";
 
 const modalStyle = {
     position: 'absolute',
@@ -36,9 +37,25 @@ const modalStyle = {
     p: 0,
     minWidth: { xs: 340, md: 420 },
     maxWidth: { xs: '90vw', md: '420px' },
+    height: '95%',
     color: '#e0e1dd',
-    overflow: 'hidden',
+    overflowY: 'auto', // Enable vertical scrolling
     border: '1px solid rgba(179, 234, 255, 0.2)',
+    // Custom scrollbar styling (optional)
+    '&::-webkit-scrollbar': {
+        width: '8px',
+    },
+    '&::-webkit-scrollbar-track': {
+        background: 'rgba(179, 234, 255, 0.1)',
+        borderRadius: '4px',
+    },
+    '&::-webkit-scrollbar-thumb': {
+        background: 'rgba(179, 234, 255, 0.3)',
+        borderRadius: '4px',
+        '&:hover': {
+            background: 'rgba(179, 234, 255, 0.5)',
+        },
+    },
 };
 
 const a11yProps = index => ({
@@ -47,11 +64,10 @@ const a11yProps = index => ({
 });
 
 export default function AuthModal({ open, onClose, onAuthSuccess }) {
-    const { login, signup } = useAuth();
+    const { login, signup, signInWithGoogle} = useAuth();
     const [tab, setTab] = useState(0);
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     // Login state
     const [loginEmail, setLoginEmail] = useState('');
@@ -62,7 +78,6 @@ export default function AuthModal({ open, onClose, onAuthSuccess }) {
     const [signupFullName, setSignupFullName] = useState('');
     const [signupEmail, setSignupEmail] = useState('');
     const [signupPassword, setSignupPassword] = useState('');
-    const [signupConfirm, setSignupConfirm] = useState('');
     const [signupError, setSignupError] = useState('');
 
     const handleTabChange = (e, newValue) => {
@@ -77,14 +92,12 @@ export default function AuthModal({ open, onClose, onAuthSuccess }) {
         setSignupFullName('');
         setSignupEmail('');
         setSignupPassword('');
-        setSignupConfirm('');
         setLoginError('');
         setSignupError('');
         setShowPassword(false);
-        setShowConfirmPassword(false);
     };
 
-    const handleLogin = async e => {
+    const handleLogin = async (e) => {
         e.preventDefault();
         setLoginError('');
 
@@ -95,30 +108,28 @@ export default function AuthModal({ open, onClose, onAuthSuccess }) {
 
         try {
             setLoading(true);
-            await login(loginEmail, loginPassword);
+            await login(loginEmail, loginPassword); // your custom login function
             clearForm();
             onClose();
             if (onAuthSuccess) {
                 onAuthSuccess();
             }
         } catch (err) {
-            setLoginError(err.message || 'Login failed. Please try again.');
+            let message = `Login failed, Email or password is incorrect. Please try again. `;
+
+            setLoginError(message);
         } finally {
             setLoading(false);
         }
     };
 
+
     const handleSignup = async e => {
         e.preventDefault();
         setSignupError('');
 
-        if (!signupFullName || !signupEmail || !signupPassword || !signupConfirm) {
+        if (!signupFullName || !signupEmail || !signupPassword ) {
             setSignupError('Please fill in all fields.');
-            return;
-        }
-
-        if (signupPassword !== signupConfirm) {
-            setSignupError('Passwords do not match.');
             return;
         }
 
@@ -136,7 +147,8 @@ export default function AuthModal({ open, onClose, onAuthSuccess }) {
                 onAuthSuccess();
             }
         } catch (err) {
-            setSignupError(err.message || 'Signup failed. Please try again.');
+            console.error(err)
+            setSignupError('Signup failed. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -145,6 +157,39 @@ export default function AuthModal({ open, onClose, onAuthSuccess }) {
     const handleClose = () => {
         clearForm();
         onClose();
+    };
+
+    // Add after handleSignup function
+    const handleSocialLogin = async (provider) => {
+        setLoading(true);
+        try {
+            let result;
+            switch (provider) {
+                case 'google':
+                    result = await signInWithGoogle();
+                    break;
+                // case 'facebook':
+                //     result = await signInWithFacebook();
+                //     break;
+                // case 'apple':
+                //     result = await signInWithApple();
+                //     break;
+                default:
+                    throw new Error('Invalid provider');
+            }
+            if (result) {
+                clearForm();
+                onClose();
+                if (onAuthSuccess) {
+                    onAuthSuccess(result);
+                }
+            }
+        } catch (error) {
+            const errorMessage = error.message || 'Social login failed. Please try again.';
+            tab === 0 ? setLoginError(errorMessage) : setSignupError(errorMessage);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -278,7 +323,12 @@ export default function AuthModal({ open, onClose, onAuthSuccess }) {
                     </Box>
 
                     {/* Form Content */}
-                    <Box sx={{ p: 3, pt: 0 }}>
+                    <Box
+                        sx={{
+                            p: 3,
+                            pt: 0,
+                        }}
+                    >
                         {/* Login Form */}
                         {tab === 0 && (
                             <Slide direction="right" in={tab === 0} mountOnEnter unmountOnExit timeout={300}>
@@ -430,6 +480,13 @@ export default function AuthModal({ open, onClose, onAuthSuccess }) {
                                     >
                                         {loading ? 'Signing In...' : 'Sign In'}
                                     </Button>
+
+                                    {/* sign in with socials option */}
+                                    <SocialLoginButtons
+                                        onSocialLogin={handleSocialLogin}
+                                        loading={loading}
+                                    />
+
                                 </Box>
                             </Slide>
                         )}
@@ -598,62 +655,6 @@ export default function AuthModal({ open, onClose, onAuthSuccess }) {
                                         }}
                                     />
 
-                                    <TextField
-                                        label="Confirm Password"
-                                        type={showConfirmPassword ? 'text' : 'password'}
-                                        variant="outlined"
-                                        value={signupConfirm}
-                                        onChange={e => setSignupConfirm(e.target.value)}
-                                        fullWidth
-                                        required
-                                        disabled={loading}
-                                        InputProps={{
-                                            startAdornment: (
-                                                <InputAdornment position="start">
-                                                    <LockIcon sx={{ color: '#b3eaff', fontSize: 20 }} />
-                                                </InputAdornment>
-                                            ),
-                                            endAdornment: (
-                                                <InputAdornment position="end">
-                                                    <IconButton
-                                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                        edge="end"
-                                                        sx={{ color: '#b3eaff' }}
-                                                    >
-                                                        {showConfirmPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                                                    </IconButton>
-                                                </InputAdornment>
-                                            ),
-                                        }}
-                                        sx={{
-                                            '& .MuiOutlinedInput-root': {
-                                                borderRadius: 2,
-                                                bgcolor: 'rgba(179, 234, 255, 0.03)',
-                                                backdropFilter: 'blur(10px)',
-                                                transition: 'all 0.2s ease',
-                                                '& fieldset': {
-                                                    borderColor: 'rgba(179, 234, 255, 0.3)',
-                                                    borderWidth: 1.5,
-                                                },
-                                                '&:hover fieldset': {
-                                                    borderColor: 'rgba(179, 234, 255, 0.5)',
-                                                },
-                                                '&.Mui-focused fieldset': {
-                                                    borderColor: '#00bfff',
-                                                    boxShadow: '0 0 0 3px rgba(0, 191, 255, 0.1)',
-                                                },
-                                            },
-                                            '& .MuiInputBase-input': {
-                                                color: '#e0e1dd',
-                                                fontSize: '1rem',
-                                            },
-                                            '& .MuiInputLabel-root': {
-                                                color: '#b3eaff',
-                                                fontWeight: 500,
-                                            },
-                                        }}
-                                    />
-
                                     <Button
                                         type="submit"
                                         variant="contained"
@@ -685,6 +686,12 @@ export default function AuthModal({ open, onClose, onAuthSuccess }) {
                                     >
                                         {loading ? 'Creating Account...' : 'Create Account'}
                                     </Button>
+
+                                    {/* sign in with socials option */}
+                                    <SocialLoginButtons
+                                        onSocialLogin={handleSocialLogin}
+                                        loading={loading}
+                                    />
                                 </Box>
                             </Slide>
                         )}

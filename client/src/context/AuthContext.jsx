@@ -1,7 +1,13 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import {
+    onAuthStateChanged,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    signInWithPopup,
+    signOut
+} from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../services/firebase';
+import { auth, db, googleProvider } from '../services/firebase';
 
 // Create context
 const AuthContext = createContext();
@@ -27,8 +33,19 @@ export const AuthProvider = ({ children }) => {
                     if (userDoc.exists()) {
                         setUserProfile(userDoc.data());
                     } else {
-                        // Handle case where profile doesn't exist (shouldn't happen normally)
-                        setUserProfile(null);
+                        // Create profile for social login users if it doesn't exist
+                        const userProfile = {
+                            uid: user.uid,
+                            email: user.email,
+                            fullName: user.displayName || 'User',
+                            photoURL: user.photoURL || null,
+                            createdAt: new Date().toISOString(),
+                            verified: user.emailVerified,
+                            authMethod: user.providerData[0]?.providerId || 'email'
+                        };
+
+                        await setDoc(doc(db, 'users', user.uid), userProfile);
+                        setUserProfile(userProfile);
                     }
                 } catch (error) {
                     console.error('Error loading user profile:', error);
@@ -44,25 +61,25 @@ export const AuthProvider = ({ children }) => {
         return unsubscribe;
     }, []);
 
-    // Login
+    // Email/Password Login
     const login = (email, password) => {
         return signInWithEmailAndPassword(auth, email, password);
     };
 
-    // Sign up with full name
+    // Email/Password Sign up with full name
     const signup = async (email, password, fullName) => {
         try {
-            // Create the user account
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
 
-            // Create user profile in Firestore
             const userProfile = {
                 uid: user.uid,
                 email: user.email,
                 fullName: fullName.trim(),
+                photoURL: null,
                 createdAt: new Date().toISOString(),
-                verified: false // you can use this for verified users later
+                verified: false,
+                authMethod: 'email'
             };
 
             await setDoc(doc(db, 'users', user.uid), userProfile);
@@ -75,6 +92,42 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // Google Sign In
+    const signInWithGoogle = async () => {
+        try {
+            const result = await signInWithPopup(auth, googleProvider);
+            // User profile will be created/updated in the onAuthStateChanged listener
+            return result;
+        } catch (error) {
+            console.error('Error during Google sign in:', error);
+            throw error;
+        }
+    };
+
+    // // Facebook Sign In
+    // const signInWithFacebook = async () => {
+    //     try {
+    //         const result = await signInWithPopup(auth, facebookProvider);
+    //         // User profile will be created/updated in the onAuthStateChanged listener
+    //         return result;
+    //     } catch (error) {
+    //         console.error('Error during Facebook sign in:', error);
+    //         throw error;
+    //     }
+    // };
+    //
+    // // Apple Sign In
+    // const signInWithApple = async () => {
+    //     try {
+    //         const result = await signInWithPopup(auth, appleProvider);
+    //         // User profile will be created/updated in the onAuthStateChanged listener
+    //         return result;
+    //     } catch (error) {
+    //         console.error('Error during Apple sign in:', error);
+    //         throw error;
+    //     }
+    // };
+
     // Logout
     const logout = () => {
         return signOut(auth);
@@ -85,6 +138,9 @@ export const AuthProvider = ({ children }) => {
         userProfile,
         login,
         signup,
+        signInWithGoogle,
+        // signInWithFacebook,
+        // signInWithApple,
         logout,
         authLoading
     };
