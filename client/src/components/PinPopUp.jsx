@@ -376,7 +376,27 @@ export default function PinPopUp({ pin, open, onClose }) {
                 display: 'flex',
                 overflow:'auto',
                 flexDirection: 'column',
-                background: 'linear-gradient(135deg, rgba(13, 27, 42, 0.98) 0%, rgba(25, 45, 65, 0.95) 100%)'
+                background: 'linear-gradient(135deg, rgba(13, 27, 42, 0.98) 0%, rgba(25, 45, 65, 0.95) 100%)',
+                // Custom Scrollbar Styling
+                '&::-webkit-scrollbar': {
+                    width: '8px',                    // Width of vertical scrollbar
+                    height: '8px',                   // Height of horizontal scrollbar
+                },
+                '&::-webkit-scrollbar-track': {
+                    background: 'rgba(255, 255, 255, 0.05)',  // Track (background) color
+                    borderRadius: '10px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                    background: 'rgba(0, 191, 255, 0.6)',     // Scrollbar thumb color
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    '&:hover': {
+                        background: 'rgba(0, 191, 255, 0.8)', // Thumb color on hover
+                    },
+                },
+                '&::-webkit-scrollbar-corner': {
+                    background: 'rgba(255, 255, 255, 0.05)',  // Corner where scrollbars meet
+                }
             }}
         >
             {/* Header with drag handle */}

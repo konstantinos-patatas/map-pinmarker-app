@@ -4,9 +4,10 @@ import {
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
     signInWithPopup,
-    signOut
+    signOut,
+    deleteUser
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../services/firebase';
 
 // Create context
@@ -104,29 +105,31 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    // // Facebook Sign In
-    // const signInWithFacebook = async () => {
-    //     try {
-    //         const result = await signInWithPopup(auth, facebookProvider);
-    //         // User profile will be created/updated in the onAuthStateChanged listener
-    //         return result;
-    //     } catch (error) {
-    //         console.error('Error during Facebook sign in:', error);
-    //         throw error;
-    //     }
-    // };
-    //
-    // // Apple Sign In
-    // const signInWithApple = async () => {
-    //     try {
-    //         const result = await signInWithPopup(auth, appleProvider);
-    //         // User profile will be created/updated in the onAuthStateChanged listener
-    //         return result;
-    //     } catch (error) {
-    //         console.error('Error during Apple sign in:', error);
-    //         throw error;
-    //     }
-    // };
+    // Delete Account
+    const deleteAccount = async () => {
+        try {
+            if (!currentUser) {
+                throw new Error('No user is currently signed in');
+            }
+
+            const userId = currentUser.uid;
+
+            // First delete the user document from Firestore
+            await deleteDoc(doc(db, 'users', userId));
+
+            // Then delete the user from Firebase Auth
+            await deleteUser(currentUser);
+
+            // Clear local state
+            setCurrentUser(null);
+            setUserProfile(null);
+
+            return { success: true };
+        } catch (error) {
+            console.error('Error deleting account:', error);
+            throw error;
+        }
+    };
 
     // Logout
     const logout = () => {
@@ -139,8 +142,7 @@ export const AuthProvider = ({ children }) => {
         login,
         signup,
         signInWithGoogle,
-        // signInWithFacebook,
-        // signInWithApple,
+        deleteAccount,
         logout,
         authLoading
     };
