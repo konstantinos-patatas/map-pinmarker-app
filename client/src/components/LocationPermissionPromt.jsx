@@ -8,6 +8,18 @@ const LocationPermissionPrompt = ({
                                   }) => {
     if (!open) return null;
 
+    const getBrowserName = () => {
+        const ua = navigator.userAgent;
+
+        if (/CriOS/i.test(ua)) return 'Chrome';
+        if (/FxiOS/i.test(ua)) return 'Firefox';
+        if (/EdgiOS/i.test(ua)) return 'Edge';
+        if (/OPiOS/i.test(ua)) return 'Opera';
+        if (/Safari/i.test(ua) && !/CriOS|FxiOS|OPiOS|EdgiOS/i.test(ua)) return 'Safari';
+        return 'the Browser you are using';
+    };
+
+
     const getDeviceSpecificInstructions = () => {
         if (deviceInfo.isIOS) {
             if (deviceInfo.isPWA) {
@@ -19,7 +31,7 @@ const LocationPermissionPrompt = ({
             } else {
                 return [
                     "Go to Settings → Privacy & Security → Location Services",
-                    "Find 'Safari' and set it to 'While Using App'",
+                    `Find '${getBrowserName()}' and set it to 'While Using App'`,
                     "Return here and tap 'Try Again' below"
                 ];
             }
@@ -304,7 +316,7 @@ const LocationPermissionPrompt = ({
                         </div>
 
                         <h2 style={styles.title}>
-                            Location Access Required
+                            Location Access Blocked
                         </h2>
 
                         <p style={styles.subtitle}>
@@ -342,7 +354,7 @@ const LocationPermissionPrompt = ({
                         </div>
                         <p style={styles.tipText}>
                             {deviceInfo.isIOS && !deviceInfo.isPWA ? (
-                                "Add this app to your home screen for better location access and a native app experience!"
+                                "Add this app to your home screen, Press share -> add to home screen"
                             ) : deviceInfo.isAndroid ? (
                                 "Use Chrome or Firefox for the best location accuracy and performance."
                             ) : (

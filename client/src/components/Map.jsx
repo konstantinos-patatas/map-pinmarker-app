@@ -44,7 +44,7 @@ function RecenterMap({ lat, lng, shouldRecenter, zoom }) {
             const targetLocation = [lat, lng];
 
             // Zoom out just 2-3 levels for quick animation
-            const intermediateZoom = Math.max(currentZoom - 1, 8);
+            const intermediateZoom = Math.max(currentZoom - 2, 8);
 
 
             // Only animate if we need to zoom out
@@ -59,7 +59,7 @@ function RecenterMap({ lat, lng, shouldRecenter, zoom }) {
                 setTimeout(() => {
                     map.panTo(targetLocation, {
                         animate: true,
-                        duration: 0.4,
+                        duration: 0.8,
                         easeLinearity: 0.2
                     });
                 }, 350);
