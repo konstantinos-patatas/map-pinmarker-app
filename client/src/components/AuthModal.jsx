@@ -118,9 +118,26 @@ export default function AuthModal({ open, onClose, onAuthSuccess }) {
                 onAuthSuccess();
             }
         } catch (err) {
-            let message = `Login failed, Email or password is incorrect. Please try again. `;
-            console.error(err);
-            setLoginError(message);
+            switch (err.code) {
+                case 'auth/invalid-email':
+                    setLoginError("Please enter a valid email address.");
+                    break;
+                case 'auth/user-disabled':
+                    setLoginError("This account has been disabled. Contact support.");
+                    break;
+                case 'auth/user-not-found':
+                case 'auth/wrong-password':
+                    setLoginError("Incorrect email or password.");
+                    break;
+                case 'auth/too-many-requests':
+                    setLoginError("Too many attempts. Please try again later.");
+                    break;
+                case 'auth/network-request-failed':
+                    setLoginError("Network error. Please check your connection.");
+                    break;
+                default:
+                    setLoginError("Log in failed. Please try again.");
+            }
         } finally {
             setLoading(false);
         }
@@ -151,7 +168,19 @@ export default function AuthModal({ open, onClose, onAuthSuccess }) {
             }
         } catch (err) {
             console.error(err)
-            setSignupError('Signup failed. Please try again.');
+            switch (err.code) {
+                case 'auth/email-already-in-use':
+                    setSignupError("There was a problem creating your account. Please try again or log in if you already have an account with this email");
+                    break;
+                case 'auth/invalid-email':
+                    setSignupError("Please enter a valid email address.");
+                    break;
+                case 'auth/weak-password':
+                    setSignupError("Your password is too weak.");
+                    break;
+                default:
+                    setSignupError("Sign up failed. Please try again.");
+            }
         } finally {
             setLoading(false);
         }
