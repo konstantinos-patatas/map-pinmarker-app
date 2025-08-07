@@ -135,6 +135,9 @@ export default function AuthModal({ open, onClose, onAuthSuccess }) {
                 case 'auth/network-request-failed':
                     setLoginError("Network error. Please check your connection.");
                     break;
+                case 'POST 400 (Bad Request)':
+                    setSignupError(`A google account with this email exist, please log in with google using ${loginEmail}`);
+                    break;
                 default:
                     setLoginError("Log in failed. Please try again.");
             }
@@ -200,15 +203,10 @@ export default function AuthModal({ open, onClose, onAuthSuccess }) {
                 case 'google':
                     result = await signInWithGoogle();
                     break;
-                // case 'facebook':
-                //     result = await signInWithFacebook();
-                //     break;
-                // case 'apple':
-                //     result = await signInWithApple();
-                //     break;
                 default:
                     throw new Error('Invalid provider');
             }
+
             if (result) {
                 clearForm();
                 onClose();
@@ -217,7 +215,22 @@ export default function AuthModal({ open, onClose, onAuthSuccess }) {
                 }
             }
         } catch (error) {
-            const errorMessage = error.message || 'Social login failed. Please try again.';
+            let errorMessage;
+
+            switch (error.code) {
+                case 'auth/account-exists-with-different-credential':
+                    errorMessage = 'An account with this email already exists. You can sign in with your email and password, and your Google account will be linked automatically on next Google sign-in.';
+                    break;
+                case 'auth/popup-closed-by-user':
+                    errorMessage = 'Sign-in was cancelled. Please try again.';
+                    break;
+                case 'auth/popup-blocked':
+                    errorMessage = 'Please allow popups and try again.';
+                    break;
+                default:
+                    errorMessage = 'Social login failed. Please try again.';
+            }
+
             tab === 0 ? setLoginError(errorMessage) : setSignupError(errorMessage);
         } finally {
             setLoading(false);
