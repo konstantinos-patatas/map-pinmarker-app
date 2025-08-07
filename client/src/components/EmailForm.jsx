@@ -104,10 +104,10 @@ export default function EmailForm({ open, onClose }) {
 
         try {
             await emailjs.sendForm(
-                'service_pvvjbi9',
-                'template_1zzgn9l',
+                import.meta.env.VITE_EMAILJS_SERVICE_ID,
+                import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
                 form.current,
-                '_QhO2m6BVWb6xXr8G'
+                import.meta.env.VITE_EMAILJS_PUBLIC_KEY
             );
 
             setButtonText('Sent Successfully!');
