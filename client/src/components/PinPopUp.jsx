@@ -397,7 +397,8 @@ export default function PinPopUp({ pin, open, onClose }) {
 
                 {/* Admin/Creator only delete button */}
                 {currentUser && (
-                    currentUser.uid === "sgXJxzZPezaucIWUie4U8vCEZRw2" ||
+                    currentUser.uid === import.meta.env.VITE_ADMIN_UID_1 ||
+                    currentUser.uid === import.meta.env.VITE_ADMIN_UID_2 ||
                     pin.createdByUid === currentUser.uid
                 ) && (
                     <Tooltip title="Delete Pin" arrow>
@@ -531,7 +532,8 @@ export default function PinPopUp({ pin, open, onClose }) {
 
                         {/* Admin/Creator only delete button */}
                         {currentUser && (
-                            currentUser.uid === "sgXJxzZPezaucIWUie4U8vCEZRw2" ||
+                            currentUser.uid === import.meta.env.VITE_ADMIN_UID_1 ||
+                            currentUser.uid === import.meta.env.VITE_ADMIN_UID_2 ||
                             pin.createdByUid === currentUser.uid
                         ) && (
                             <Tooltip title="Delete Pin" arrow>
