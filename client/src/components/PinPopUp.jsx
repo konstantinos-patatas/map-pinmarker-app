@@ -396,7 +396,7 @@ export default function PinPopUp({ pin, open, onClose }) {
                 </Box>
 
                 {/* Admin/Creator only delete button */}
-                {( (currentUser.email === "kpatatas15504@gmail.com") || pin.createdByEmail === currentUser.email) && (
+                {( (currentUser.uid === "sgXJxzZPezaucIWUie4U8vCEZRw2") || pin.createdByUid === currentUser.uid) && (
                     <Tooltip title="Delete Pin" arrow>
                         <IconButton
                             onClick={handleDelete}
