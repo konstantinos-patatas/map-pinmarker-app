@@ -44,9 +44,8 @@ function RecenterMap({ lat, lng, shouldRecenter, zoom }) {
             const targetLocation = [lat, lng];
 
             // Zoom out just 2-3 levels for quick animation
-            const intermediateZoom = Math.max(currentZoom - 3, 8);
+            const intermediateZoom = Math.max(currentZoom - 1, 8);
 
-            console.log(`Fast animation: ${currentZoom} → ${intermediateZoom} → ${zoom}`);
 
             // Only animate if we need to zoom out
             if (intermediateZoom < currentZoom) {
