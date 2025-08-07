@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, {useEffect, useState, useCallback} from 'react';
 import { Box, Alert } from '@mui/material';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet-rotate';
@@ -31,14 +31,78 @@ function MapClickHandler({ onMapClick }) {
     return null;
 }
 
-//helper react function to programmatically change location when user navigates elsewhere
+//helper react function to programmatically change location when user navigates elsewhere(zoom out-in animation)
 function RecenterMap({ lat, lng, shouldRecenter, zoom }) {
     const map = useMapEvents({});
+    const [isAnimating, setIsAnimating] = useState(false);
+
     React.useEffect(() => {
-        if (lat && lng && shouldRecenter) {
-            map.setView([lat, lng], zoom, { animate: true });
+        if (lat && lng && shouldRecenter && map && !isAnimating) {
+            setIsAnimating(true);
+
+            const currentZoom = map.getZoom();
+            const targetLocation = [lat, lng];
+
+            // Zoom out just 1-2 levels for quick animation
+            const intermediateZoom = Math.max(currentZoom - 2, 8);
+
+            console.log(`Fast animation: ${currentZoom} → ${intermediateZoom} → ${zoom}`);
+
+            // Only animate if we need to zoom out
+            if (intermediateZoom < currentZoom) {
+                // Step 1: Quick zoom out
+                map.setZoom(intermediateZoom, {
+                    animate: true,
+                    duration: 0.4
+                });
+
+                // Step 2: Fast pan
+                setTimeout(() => {
+                    map.panTo(targetLocation, {
+                        animate: true,
+                        duration: 0.4,
+                        easeLinearity: 0.2
+                    });
+                }, 350);
+
+                // Step 3: Quick zoom back in (0.4s)
+                setTimeout(() => {
+                    map.setZoom(zoom, {
+                        animate: true,
+                        duration: 0.4
+                    });
+                }, 1200);
+
+                // Reset animation flag
+                setTimeout(() => {
+                    setIsAnimating(false);
+                }, 1700);
+            } else {
+                // Just pan directly if already zoomed out
+                map.panTo(targetLocation, {
+                    animate: true,
+                    duration: 0.5,
+                    easeLinearity: 0.2
+                });
+
+                // Quick zoom adjust if needed
+                setTimeout(() => {
+                    if (currentZoom !== zoom) {
+                        map.setZoom(zoom, {
+                            animate: true,
+                            duration: 0.3
+                        });
+                    }
+                }, 850);
+
+                // Reset animation flag
+                setTimeout(() => {
+                    setIsAnimating(false);
+                }, 1200);
+            }
         }
-    }, [lat, lng, shouldRecenter, zoom, map]);
+    }, [lat, lng, shouldRecenter, zoom, map, isAnimating]);
+
     return null;
 }
 
@@ -183,11 +247,46 @@ export default function Map({ onMapClick, currentUser }) {
     }, [locationWatchId]);
 
     // Handle manual location request
-    const handleManualLocationRequest = () => {
+    const handleManualLocationRequest =  useCallback(async () => {
         setShowLocationPrompt(false);
-        setShouldRecenterMap(true);
-        handleLocationRequest();
-    };
+
+        try {
+            const locationData = await requestLocationWithFallback();
+
+            setPosition({
+                lat: locationData.lat,
+                lng: locationData.lng,
+            });
+            setLocationMethod(locationData.method);
+            setError(null);
+            setShowLocationPrompt(false);
+
+            // Trigger animation after a small delay
+            setTimeout(() => {
+                setShouldRecenterMap(true);
+            }, 100);
+
+            // Keep loading for fast animation duration (1.8 seconds total)
+            setTimeout(() => {
+                setShouldRecenterMap(false); // Reset for next use
+            }, 1500);
+
+        } catch (error) {
+            console.log('Location request failed:', error);
+
+            if (error.message === 'Location permission denied' ||
+                error.message === 'Unable to determine location') {
+                setShowLocationPrompt(true);
+                setPosition(fallbackPosition);
+                setLocationMethod('fallback');
+                setError('Location access is needed. Please enable location services and try again.');
+            } else {
+                setPosition(fallbackPosition);
+                setLocationMethod('fallback');
+                setError('Unable to get your location. Please try again later.');
+            }
+        }
+    }, []);
 
     // Handle layer change
     const handleLayerChange = (layerId) => {
@@ -346,7 +445,11 @@ export default function Map({ onMapClick, currentUser }) {
                 rotate={true}
                 touchRotate={true}
                 rotateControl={true}
-                bearing={0} // Initial rotation angle (optional)
+                bearing={0} // Initial rotation angle
+                fadeAnimation={true}
+                zoomAnimation={true}
+                markerZoomAnimation={true}
+                preferCanvas={false}
             >
 
             {/* Custom layers control - Street View */}
@@ -354,6 +457,10 @@ export default function Map({ onMapClick, currentUser }) {
                     <TileLayer
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         attribution="&copy; OpenStreetMap contributors"
+                        keepBuffer={3}
+                        updateWhenIdle={false}
+                        updateWhenZooming={true}
+                        updateInterval={100}
                     />
                 )}
 
