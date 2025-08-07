@@ -396,14 +396,17 @@ export default function PinPopUp({ pin, open, onClose }) {
                 </Box>
 
                 {/* Admin/Creator only delete button */}
-                {( (currentUser.uid === "sgXJxzZPezaucIWUie4U8vCEZRw2") || pin.createdByUid === currentUser.uid) && (
+                {currentUser && (
+                    currentUser.uid === "sgXJxzZPezaucIWUie4U8vCEZRw2" ||
+                    pin.createdByUid === currentUser.uid
+                ) && (
                     <Tooltip title="Delete Pin" arrow>
                         <IconButton
                             onClick={handleDelete}
                             size="medium"
                             sx={{
-                                mr:2,
-                                color:'#F44336',
+                                mr: 2,
+                                color: '#F44336',
                                 bgcolor: 'rgba(244, 67, 54, 0.1)',
                                 border: '1px solid rgba(255,255,255,0.3)',
                                 borderRadius: '50%',
@@ -527,19 +530,22 @@ export default function PinPopUp({ pin, open, onClose }) {
                         </IconButton>
 
                         {/* Admin/Creator only delete button */}
-                        {( (currentUser.email === "kpatatas15504@gmail.com") || pin.createdByEmail === currentUser.email) && (
+                        {currentUser && (
+                            currentUser.uid === "sgXJxzZPezaucIWUie4U8vCEZRw2" ||
+                            pin.createdByUid === currentUser.uid
+                        ) && (
                             <Tooltip title="Delete Pin" arrow>
                                 <IconButton
                                     onClick={handleDelete}
                                     size="medium"
                                     sx={{
-                                        mr:2,
-                                        color:'#F44336',
+                                        mr: 2,
+                                        color: '#F44336',
                                         bgcolor: 'rgba(244, 67, 54, 0.1)',
                                         border: '1px solid rgba(255,255,255,0.3)',
                                         borderRadius: '50%',
                                         '&:hover': {
-                                            bgcolor: 'rgba(244, 67, 54, 0.5)',
+                                            bgcolor: 'rgba(244, 67, 54)',
                                         }
                                     }}
                                 >
