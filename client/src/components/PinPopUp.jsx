@@ -253,33 +253,33 @@ export default function PinPopUp({ pin, open, onClose }) {
         }
     };
 
-    const handleDelete = async () => {
-        // Show confirmation dialog
-        const confirmDelete = window.confirm(
-            `Are you sure you want to delete the parking pin at "${pin.streetName.displayName}"?\n\nThis action cannot be undone.`
-        );
-
-        // If user cancels, exit early
-        if (!confirmDelete) {
-            return;
-        }
-
-        try {
-            // Create reference to the specific document
-            const pinDocRef = doc(db, 'pins', pin.id);
-
-            // Delete the document
-            await deleteDoc(pinDocRef);
-            onClose();
-
-            console.log('Pin deleted successfully');
-        } catch (error) {
-            console.error('Error deleting pin:', error);
-            // Handle error (show error message to user)
-            setErrorMessage('Failed to delete pin. Please try again.');
-            setOpenError(true);
-        }
-    };
+    // const handleDelete = async () => {
+    //     // Show confirmation dialog
+    //     const confirmDelete = window.confirm(
+    //         `Are you sure you want to delete the parking pin at "${pin.streetName.displayName}"?\n\nThis action cannot be undone.`
+    //     );
+    //
+    //     // If user cancels, exit early
+    //     if (!confirmDelete) {
+    //         return;
+    //     }
+    //
+    //     try {
+    //         // Create reference to the specific document
+    //         const pinDocRef = doc(db, 'pins', pin.id);
+    //
+    //         // Delete the document
+    //         await deleteDoc(pinDocRef);
+    //         onClose();
+    //
+    //         console.log('Pin deleted successfully');
+    //     } catch (error) {
+    //         console.error('Error deleting pin:', error);
+    //         // Handle error (show error message to user)
+    //         setErrorMessage('Failed to delete pin. Please try again.');
+    //         setOpenError(true);
+    //     }
+    // };
 
 
     //favorite or not the button on mount
@@ -396,26 +396,26 @@ export default function PinPopUp({ pin, open, onClose }) {
                 </Box>
 
                 {/* Admin/Creator only delete button */}
-                {( (currentUser.email === "kpatatas15504@gmail.com") || pin.createdByEmail === currentUser.email) && (
-                    <Tooltip title="Delete Pin" arrow>
-                        <IconButton
-                            onClick={handleDelete}
-                            size="medium"
-                            sx={{
-                                mr:2,
-                                color:'#F44336',
-                                bgcolor: 'rgba(244, 67, 54, 0.1)',
-                                border: '1px solid rgba(255,255,255,0.3)',
-                                borderRadius: '50%',
-                                '&:hover': {
-                                    bgcolor: 'rgba(244, 67, 54)',
-                                }
-                            }}
-                        >
-                            <DeleteOutlineIcon />
-                        </IconButton>
-                    </Tooltip>
-                )}
+                {/*{( (currentUser.email === "kpatatas15504@gmail.com") || pin.createdByEmail === currentUser.email) && (*/}
+                {/*    <Tooltip title="Delete Pin" arrow>*/}
+                {/*        <IconButton*/}
+                {/*            onClick={handleDelete}*/}
+                {/*            size="medium"*/}
+                {/*            sx={{*/}
+                {/*                mr:2,*/}
+                {/*                color:'#F44336',*/}
+                {/*                bgcolor: 'rgba(244, 67, 54, 0.1)',*/}
+                {/*                border: '1px solid rgba(255,255,255,0.3)',*/}
+                {/*                borderRadius: '50%',*/}
+                {/*                '&:hover': {*/}
+                {/*                    bgcolor: 'rgba(244, 67, 54)',*/}
+                {/*                }*/}
+                {/*            }}*/}
+                {/*        >*/}
+                {/*            <DeleteOutlineIcon />*/}
+                {/*        </IconButton>*/}
+                {/*    </Tooltip>*/}
+                {/*)}*/}
 
                 {/*close button*/}
                 <Tooltip title="Close" arrow>
@@ -527,26 +527,26 @@ export default function PinPopUp({ pin, open, onClose }) {
                         </IconButton>
 
                         {/* Admin/Creator only delete button */}
-                        {( (currentUser.email === "kpatatas15504@gmail.com") || pin.createdByEmail === currentUser.email) && (
-                            <Tooltip title="Delete Pin" arrow>
-                                <IconButton
-                                    onClick={handleDelete}
-                                    size="medium"
-                                    sx={{
-                                        mr:2,
-                                        color:'#F44336',
-                                        bgcolor: 'rgba(244, 67, 54, 0.1)',
-                                        border: '1px solid rgba(255,255,255,0.3)',
-                                        borderRadius: '50%',
-                                        '&:hover': {
-                                            bgcolor: 'rgba(244, 67, 54, 0.5)',
-                                        }
-                                    }}
-                                >
-                                    <DeleteOutlineIcon />
-                                </IconButton>
-                            </Tooltip>
-                        )}
+                        {/*{( (currentUser.email === "kpatatas15504@gmail.com") || pin.createdByEmail === currentUser.email) && (*/}
+                        {/*    <Tooltip title="Delete Pin" arrow>*/}
+                        {/*        <IconButton*/}
+                        {/*            onClick={handleDelete}*/}
+                        {/*            size="medium"*/}
+                        {/*            sx={{*/}
+                        {/*                mr:2,*/}
+                        {/*                color:'#F44336',*/}
+                        {/*                bgcolor: 'rgba(244, 67, 54, 0.1)',*/}
+                        {/*                border: '1px solid rgba(255,255,255,0.3)',*/}
+                        {/*                borderRadius: '50%',*/}
+                        {/*                '&:hover': {*/}
+                        {/*                    bgcolor: 'rgba(244, 67, 54, 0.5)',*/}
+                        {/*                }*/}
+                        {/*            }}*/}
+                        {/*        >*/}
+                        {/*            <DeleteOutlineIcon />*/}
+                        {/*        </IconButton>*/}
+                        {/*    </Tooltip>*/}
+                        {/*)}*/}
 
                         <IconButton
                             onClick={onClose}
