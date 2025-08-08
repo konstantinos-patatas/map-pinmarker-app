@@ -1,7 +1,7 @@
 
-# 🚗 ParknFree – Community-Driven Free Parking Finder Web App
+# 🚗 Community-Driven Parking Finder Web App
 
-**Live:** [https://parknfree.com](https://parknfree.com)
+**Find the Live version of this website:** [https://parknfree.com](https://parknfree.com)
 
 ParknFree is a community-driven web application that helps users find and share free parking spots in their city. Built with React and Firebase, it allows users to pin locations, view others' contributions, and favorite commonly used spots. The app is optimized for quick deployment and ease of use, and was developed and launched in just one week.
 
