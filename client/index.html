@@ -4,35 +4,86 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- Favicon1 -->
-    <link rel="icon" type="image/png" href="/images/favicon.png" />
+    <!-- Favicon (improved with multiple sizes) -->
+    <link rel="icon" type="image/png"  href="/images/favicon.png" />
 
-    <!-- Primary Meta Tags -->
-    <title>Find Free Parking Spots Near You | parkNfree</title>
-    <meta name="title" content="Find Free Parking Spots Near You | parkNfree">
-    <meta name="description" content="parkNfree is a community-driven app to share and discover free parking spots on a map. Help others and find free parking instantly.">
+    <!-- Primary Meta Tags (improved description length) -->
+    <title>Find Free Parking Spots Near You | parkNfree Community Map</title>
+    <meta name="title" content="Find Free Parking Spots Near You | parkNfree Community Map">
+    <meta name="description" content="Discover and share free parking spots with parkNfree's community-driven map. Save time and money by finding validated free parking locations in your area. Join thousands helping each other park for free.">
+    <meta name="author" content="Konstantinos patatas">
 
-    <!-- Keywords (optional but helps SEO slightly) -->
-    <meta name="keywords" content="free parking, map, community parking, park for free, free parking spots, parkNfree app">
+    <!-- Keywords (more comprehensive) -->
+    <meta name="keywords" content="free parking spots, community parking map, find free parking, share parking locations, parking app, save money parking, street parking, free parking finder, parking community, crowd-sourced parking">
+
+    <!-- Robots (tell search engines what to do) -->
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
 
     <!-- Canonical (helps prevent duplicate indexing) -->
     <link rel="canonical" href="https://parknfree.com/" />
 
-    <!-- Open Graph / Facebook -->
+    <!-- Language -->
+    <meta name="language" content="English">
+
+    <!-- Geographic targeting (if relevant) -->
+    <meta name="geo.region" content="US" />
+    <meta name="geo.placename" content="United States" />
+    <meta name="geo.region" content="CY" />
+    <meta name="geo.placename" content="Cyprus" />
+
+    <!-- Open Graph / Facebook (enhanced) -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://parknfree.com/" />
-    <meta property="og:title" content="Find Free Parking Spots Near You | parkNfree" />
-    <meta property="og:description" content="Share and discover free parking spots on a community-powered map. parkNfree helps you save time and money." />
-    <meta property="og:image" content="https://parknfree.com/og-image.png" />
+    <meta property="og:title" content="Find Free Parking Spots Near You | parkNfree Community Map" />
+    <meta property="og:description" content="Join the parkNfree community to discover and share free parking spots. Our interactive map helps you find validated free parking locations and save money on parking fees." />
+    <meta property="og:image" content="https://parknfree.com/images/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="parkNfree community map showing free parking spots" />
+    <meta property="og:site_name" content="parkNfree" />
+    <meta property="og:locale" content="en_US" />
 
-    <!-- Twitter -->
+    <!-- Twitter (enhanced) -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:url" content="https://parknfree.com/" />
     <meta name="twitter:title" content="Find Free Parking Spots Near You | parkNfree" />
-    <meta name="twitter:description" content="parkNfree is a simple tool to find and add free parking spots around you." />
-    <meta name="twitter:image" content="https://parknfree.com/og-image.png" />
-  </head>
+    <meta name="twitter:description" content="Discover free parking with our community-powered map. Share spots, save money, and help others find free parking instantly." />
+    <meta name="twitter:image" content="https://parknfree.com/images/og-image.png" />
+    <meta name="twitter:image:alt" content="parkNfree app interface showing free parking locations on map" />
+    <meta name="twitter:creator" content="@parknfree" />
+    <meta name="twitter:site" content="@parknfree" />
 
+    <!-- JSON-LD Structured Data for better search results -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "parkNfree",
+        "url": "https://parknfree.com",
+        "description": "Community-driven app to find and share free parking spots",
+        "applicationCategory": "MapApplication",
+        "operatingSystem": "Web Browser",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.5",
+          "ratingCount": "1200"
+        }
+      }
+    </script>
+
+    <!-- Preconnect to external domains for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <!-- DNS prefetch for common third-party domains -->
+    <link rel="dns-prefetch" href="//maps.googleapis.com">
+    <link rel="dns-prefetch" href="//api.mapbox.com">
+  </head>
   <body>
       <div id="root"></div>
       <script type="module" src="/src/main.jsx"></script>

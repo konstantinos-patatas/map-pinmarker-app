@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# Block admin or private areas (if you have any)
+Disallow: /admin/
+Disallow: /api/
+Disallow: /.netlify/
+
+# Sitemap location
+Sitemap: https://parknfree.com/sitemap.xml
+
+# Crawl-delay (optional, helps with server load)
+Crawl-delay: 1
